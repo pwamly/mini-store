@@ -7,7 +7,7 @@ Act as a Senior Frontend Developer. Your goal is to rebrand this application fro
 
 **INPUT VARIABLES:**
 
-- **Old Brand:** `{{OLD_BRAND}}` (e.g., Mantis)
+- **Old Brand:** `{{OLD_BRAND}}` (e.g., leo)
 - **New Brand:** `{{NEW_BRAND}}` (e.g., Able Pro)
 - **New Package Name:** `{{NEW_PACKAGE_NAME}}` (e.g., able-pro-react-js)
 
@@ -19,7 +19,7 @@ Act as a Senior Frontend Developer. Your goal is to rebrand this application fro
 
 1.  **Case Sensitive Search:** Search for `{{OLD_BRAND}}` and replace with `{{NEW_BRAND}}` in all text files (excluding `node_modules`).
 2.  **Lowercase Search:** Search for `{{OLD_BRAND_LOWER}}` (lowercase) and replace with `{{NEW_BRAND_LOWER}}` (lowercase).
-    - _Constraint:_ Do NOT replace external library names (e.g., `mantis-ui` if it is a third-party dependency) unless you are sure it is an internal package.
+    - _Constraint:_ Do NOT replace external library names (e.g., `leo-ui` if it is a third-party dependency) unless you are sure it is an internal package.
     - _Constraint:_ Check URLs carefully. Update links to documentation or repositories if they should point to the new brand, but keep them if they are historical references.
 
 ---

@@ -26,7 +26,7 @@ Modify the following files:
 ## Example
 
 **Input:**
-Standard Mantis sidebar with "Dashboard", "Statistics", etc., each having a leading icon.
+Standard leo sidebar with "Dashboard", "Statistics", etc., each having a leading icon.
 
 **Output:**
 A simplified sidebar with only text labels. The labels should be shifted to the left to occupy the space where the icons used to be, ensuring a clean and professional look.

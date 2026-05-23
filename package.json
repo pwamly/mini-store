@@ -1,7 +1,7 @@
 {
-  "name": "mantis-material-free-react",
+  "name": "mini-store",
   "version": "2.1.0",
-  "homepage": "https://mantisdashboard.com/free",
+  "homepage": "https://leodashboard.com/free",
   "author": {
     "name": "CodedThemes",
     "email": "codedthemes@gmail.com",
@@ -31,6 +31,7 @@
     "formik": "2.4.9",
     "framer-motion": "12.34.2",
     "lodash-es": "4.17.23",
+    "or": "^0.2.0",
     "react": "19.2.4",
     "react-device-detect": "2.2.3",
     "react-dom": "19.2.4",

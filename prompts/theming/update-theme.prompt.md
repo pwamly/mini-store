@@ -1,5 +1,5 @@
 <!--
-  DESCRIPTION: This prompt guides the AI assistant to switch or create the active global theme preset of the Mantis React Admin Template. It also modifies the presetColor configuration in config.js and updates the localStorage key in ConfigContext.jsx to force a cache refresh.
+  DESCRIPTION: This prompt guides the AI assistant to switch or create the active global theme preset of the leo React Admin Template. It also modifies the presetColor configuration in config.js and updates the localStorage key in ConfigContext.jsx to force a cache refresh.
 -->
 
 <!-- AGENT: Gemini 3 Pro -->
@@ -16,7 +16,7 @@
 
 3. Navigate to `src/contexts/ConfigContext.jsx`.
    - Find the `useLocalStorage` hook call.
-   - Update the key string (first argument) by appending the theme name (e.g., change `'mantis-react-free-config'` to `'mantis-react-free-config-{{THEME_NAME}}'`).
+   - Update the key string (first argument) by appending the theme name (e.g., change `'leo-react-free-config'` to `'leo-react-free-config-{{THEME_NAME}}'`).
    - This is CRITICAL to force the application to drop the cached configuration and use the new default you just set. 
 
 # Rules
@@ -56,7 +56,7 @@ Updated `src/contexts/ConfigContext.jsx`:
 ```javascript
 export function ConfigProvider({ children }) {
   const { state, setState, setField, resetState } = useLocalStorage(
-    "mantis-react-free-config-theme1",
+    "leo-react-free-config-theme1",
     config,
   );
   // ...

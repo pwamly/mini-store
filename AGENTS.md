@@ -1,4 +1,4 @@
-# Mantis Free React Admin Template - AI Instructions
+# leo Free React Admin Template - AI Instructions
 
 ## Role & Context
 

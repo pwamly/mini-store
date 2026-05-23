@@ -20,13 +20,13 @@ export default function NavCard() {
       <Stack alignItems="center" spacing={2.5}>
         <CardMedia component="img" image={avatar} sx={{ width: 112 }} />
         <Stack alignItems="center">
-          <Typography variant="h5">Mantis Pro</Typography>
+          <Typography variant="h5">Visit Necbot</Typography>
           <Typography variant="h6" color="secondary">
-            Checkout pro features
+            AI assistant for your business.
           </Typography>
         </Stack>
         <AnimateButton>
-          <Button component={Link} target="_blank" href="https://mantisdashboard.com" variant="contained" color="success" size="small">
+          <Button component={Link} target="_blank" href="https://necbot.ink" variant="contained" color="success" size="small">
             Pro
           </Button>
         </AnimateButton>

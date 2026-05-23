@@ -1,33 +1,33 @@
-# Mantis Free React Material UI Dashboard Template [![Tweet](https://img.shields.io/twitter/url/http/shields.io.svg?style=social)](https://twitter.com/intent/tweet?text=Get%20Mantis%20Free%20React%20-%20The%20Most%20Beautiful%20Material-UI%20Designed%20Admin%20Dashboard%20Template%20&url=https://mantisdashboard.com/free&via=codedthemes&hashtags=react,materialui,nextjs,webdev,developers,typescript)
+# leo Free React Material UI Dashboard Template [![Tweet](https://img.shields.io/twitter/url/http/shields.io.svg?style=social)](https://twitter.com/intent/tweet?text=Get%20leo%20Free%20React%20-%20The%20Most%20Beautiful%20Material-UI%20Designed%20Admin%20Dashboard%20Template%20&url=https://leodashboard.com/free&via=codedthemes&hashtags=react,materialui,nextjs,webdev,developers,typescript)
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Price](https://img.shields.io/badge/price-FREE-0098f7.svg)](https://github.com/codedthemes/mantis-free-react-admin-template/blob/master/LICENSE)
-[![GitHub package version](https://img.shields.io/github/package-json/v/codedthemes/mantis-free-react-admin-template)](https://github.com/codedthemes/mantis-free-react-admin-template/)
-[![Download ZIP](https://img.shields.io/badge/Download-ZIP-blue?style=flat-square&logo=github)](https://codedthemes.com/item/mantis-free-mui-admin-template/)
+[![Price](https://img.shields.io/badge/price-FREE-0098f7.svg)](https://github.com/codedthemes/leo-free-react-admin-template/blob/master/LICENSE)
+[![GitHub package version](https://img.shields.io/github/package-json/v/codedthemes/leo-free-react-admin-template)](https://github.com/codedthemes/leo-free-react-admin-template/)
+[![Download ZIP](https://img.shields.io/badge/Download-ZIP-blue?style=flat-square&logo=github)](https://codedthemes.com/item/leo-free-mui-admin-template/)
 [![Join Discord](https://img.shields.io/badge/Join-Discord-5865F2?style=flat-square&logo=discord&logoColor=white)](https://discord.com/invite/p2E2WhCb6s)
 
-Mantis is a free and open source React dashboard template made using the Material UI React component library with aim of flexibility and better customizability.
+leo is a free and open source React dashboard template made using the Material UI React component library with aim of flexibility and better customizability.
 
 ### Name Derived From Nature
 
-Mantis Logo is inspired from the insect name - 'Mantises' as they have triangular heads with flexible Necks. Also, the name is derived from two popular design systems, Material and Ant Design (M-Ant-is).
+leo Logo is inspired from the insect name - 'leoes' as they have triangular heads with flexible Necks. Also, the name is derived from two popular design systems, Material and Ant Design (M-Ant-is).
 
-Mantis has Ant Design principal on top of the Material UI React component library.
+leo has Ant Design principal on top of the Material UI React component library.
 
 ✨ Support us! If you like this theme, click the ⭐ (Top right) and let it shine
 
-![mantis-free-react-dashboard-template.jpg](https://org-public-assets.s3.us-west-2.amazonaws.com/Free-Version-Banners/GITHUB-FREE-REACT-REPO+-+Mantis.png)
+![leo-free-react-dashboard-template.jpg](https://org-public-assets.s3.us-west-2.amazonaws.com/Free-Version-Banners/GITHUB-FREE-REACT-REPO+-+leo.png)
 
 ## Table of contents
 
 - [Getting Started](#getting-started)
 - [Download](#download)
-- [Why Mantis?](#why-mantis)
+- [Why leo?](#why-leo)
 - [What's included in Premium Version?](#whats-included-in-premium-version)
 - [Documentation](#documentation)
 - [Browser support](#browser-support)
 - [Technology Stack](#technology-stack)
-- [Mantis Figma UI Kit](#mantis-figma-ui-kit)
+- [leo Figma UI Kit](#leo-figma-ui-kit)
 - [Other Technologies](#other-technologies)
 - 💰[Save more with Big Bundle](#save-more-with-big-bundle)💰
 - [More React Dashboard Templates](#more-react-dashboard-templates)
@@ -43,7 +43,7 @@ Mantis has Ant Design principal on top of the Material UI React component librar
 1. Clone from Github
 
 ```
-git clone https://github.com/codedthemes/mantis-free-react-admin-template.git
+git clone https://github.com/codedthemes/leo-free-react-admin-template.git
 ```
 
 2. Install packages
@@ -60,16 +60,16 @@ yarn run start
 
 ## Download
 
-- Mantis Free
-  - [Live Preview](https://mantisdashboard.com/free/)
-  - [Download](https://codedthemes.com/item/mantis-free-mui-admin-template/)
-- Mantis Pro
-  - [Live Preview](https://mantisdashboard.com/)
-  - [Download](https://codedthemes.com/item/mantis-mui-react-dashboard-template/)
+- leo Free
+  - [Live Preview](https://leodashboard.com/free/)
+  - [Download](https://codedthemes.com/item/leo-free-mui-admin-template/)
+- leo Pro
+  - [Live Preview](https://leodashboard.com/)
+  - [Download](https://codedthemes.com/item/leo-mui-react-dashboard-template/)
 
-## Why Mantis?
+## Why leo?
 
-Mantis offers everything needed to build an advanced dashboard application. In the initial release, we included following high-end features,
+leo offers everything needed to build an advanced dashboard application. In the initial release, we included following high-end features,
 
 - Support React19.
 - Professional user interface.
@@ -81,9 +81,9 @@ Mantis offers everything needed to build an advanced dashboard application. In t
 
 ## What's included in Premium Version?
 
-The [Pro version](https://mantisdashboard.com/) of Mantis react template includes features such as TypeScript, apps, authentication methods (i.e. JWT, Auth0, Firebase, AWS, Supabase), advance components, form plugins, layouts, widgets, and more.
+The [Pro version](https://leodashboard.com/) of leo react template includes features such as TypeScript, apps, authentication methods (i.e. JWT, Auth0, Firebase, AWS, Supabase), advance components, form plugins, layouts, widgets, and more.
 
-| [Mantis Free](https://mantisdashboard.com/free/)                                                     | [Mantis](https://mantisdashboard.com/)                                            |
+| [leo Free](https://leodashboard.com/free/)                                                     | [leo](https://leodashboard.com/)                                            |
 | ---------------------------------------------------------------------------------------------------- | :-------------------------------------------------------------------------------- |
 | **7** Demo pages                                                                                     | **85+** demo pages                                                                |
 | -                                                                                                    | ✓ Multi-language                                                                  |
@@ -93,12 +93,12 @@ The [Pro version](https://mantisdashboard.com/) of Mantis react template include
 | -                                                                                                    | ✓ Multiple color options                                                          |
 | -                                                                                                    | ✓ RTL                                                                             |
 | -                                                                                                    | ✓ JWT authentications                                                             |
-| -                                                                                                    | ✓ [More components](https://mantisdashboard.com/components-overview/autocomplete) |
-| ✓ [MIT License](https://github.com/codedthemes/mantis-free-react-admin-template/blob/master/LICENSE) | ✓ [Pro License](https://mui.com/store/license/)                                   |
+| -                                                                                                    | ✓ [More components](https://leodashboard.com/components-overview/autocomplete) |
+| ✓ [MIT License](https://github.com/codedthemes/leo-free-react-admin-template/blob/master/LICENSE) | ✓ [Pro License](https://mui.com/store/license/)                                   |
 
 ## Documentation
 
-[Mantis documentation](https://codedthemes.gitbook.io/mantis) helps you out in all aspects from Installation to deployment.
+[leo documentation](https://codedthemes.gitbook.io/leo) helps you out in all aspects from Installation to deployment.
 
 ## Browser support
 
@@ -115,19 +115,19 @@ The [Pro version](https://mantisdashboard.com/) of Mantis react template include
 - Code splitting.
 - CSS-in-JS.
 
-## Mantis Figma UI Kit
+## leo Figma UI Kit
 
 | FREE                                                                                                                        | PRO                                                                                                                       |
 | --------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
-|  <a href="https://codedthemes.com/item/mantis-free-figma-ui-kit/" traget="_blank"><img src="https://org-public-assets.s3.us-west-2.amazonaws.com/Banners/Figma_Free_Mantis.png" width="450" alt="Figma Free"></a> | <a href="https://codedthemes.com/item/mantis-figma-ui-kit/" traget="_blank"><img src="https://org-public-assets.s3.us-west-2.amazonaws.com/Banners/Figma_Pro_Mantis.png" width="450" alt="Figma Pro"></a> |
+|  <a href="https://codedthemes.com/item/leo-free-figma-ui-kit/" traget="_blank"><img src="https://org-public-assets.s3.us-west-2.amazonaws.com/Banners/Figma_Free_leo.png" width="450" alt="Figma Free"></a> | <a href="https://codedthemes.com/item/leo-figma-ui-kit/" traget="_blank"><img src="https://org-public-assets.s3.us-west-2.amazonaws.com/Banners/Figma_Pro_leo.png" width="450" alt="Figma Pro"></a> |
 
 ## Other Technologies
 
 | Technology                                                                                                                        | Free                                                                               | Pro                                                                       |
 | --------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------- | ------------------------------------------------------------------------- |
-| <p align="center"><img src="https://org-public-assets.s3.us-west-2.amazonaws.com/logos/Angular.png" width="25" height="25"></p>   | [**Free**](https://codedthemes.com/item/mantis-angular-free-admin-template/)       | [**Pro**](https://codedthemes.com/item/mantis-angular-admin-template/)    |
-| <p align="center"><img src="https://org-public-assets.s3.us-west-2.amazonaws.com/logos/Bootstrap.png" width="30" height="30"></p> | [**Free**](https://codedthemes.com/item/mantis-bootstrap-free-admin-template/)     | [**Pro**](https://codedthemes.com/item/mantis-bootstrap-admin-dashboard/) |
-| <p align="center"><img src="https://org-public-assets.s3.us-west-2.amazonaws.com/logos/Vue.png" width="25" height="25"></p>       | [**Free**](https://codedthemes.com/item/mantis-free-vuetify-vuejs-admin-template/) | [**Pro**](https://codedthemes.com/item/mantis-vue-admin-template/)        |
+| <p align="center"><img src="https://org-public-assets.s3.us-west-2.amazonaws.com/logos/Angular.png" width="25" height="25"></p>   | [**Free**](https://codedthemes.com/item/leo-angular-free-admin-template/)       | [**Pro**](https://codedthemes.com/item/leo-angular-admin-template/)    |
+| <p align="center"><img src="https://org-public-assets.s3.us-west-2.amazonaws.com/logos/Bootstrap.png" width="30" height="30"></p> | [**Free**](https://codedthemes.com/item/leo-bootstrap-free-admin-template/)     | [**Pro**](https://codedthemes.com/item/leo-bootstrap-admin-dashboard/) |
+| <p align="center"><img src="https://org-public-assets.s3.us-west-2.amazonaws.com/logos/Vue.png" width="25" height="25"></p>       | [**Free**](https://codedthemes.com/item/leo-free-vuetify-vuejs-admin-template/) | [**Pro**](https://codedthemes.com/item/leo-vue-admin-template/)        |
 
 ## Save more with Big Bundle
 
@@ -143,11 +143,11 @@ The [Pro version](https://mantisdashboard.com/) of Mantis react template include
 
 ## Issues
 
-Please generate a [Github issue](https://github.com/codedthemes/mantis-free-react-admin-template/issues) if you found a bug in any version. We are try our best to resolve the issue.
+Please generate a [Github issue](https://github.com/codedthemes/leo-free-react-admin-template/issues) if you found a bug in any version. We are try our best to resolve the issue.
 
 ## License
 
-- Licensed under [MIT](https://github.com/codedthemes/mantis-free-react-admin-template/blob/master/LICENSE)
+- Licensed under [MIT](https://github.com/codedthemes/leo-free-react-admin-template/blob/master/LICENSE)
 - Copyright © [CodedThemes](https://codedthemes.com/)
 
 ## Contributor
