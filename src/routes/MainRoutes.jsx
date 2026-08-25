@@ -12,8 +12,8 @@ const Color = Loadable(lazy(() => import('pages/component-overview/color')));
 const Typography = Loadable(lazy(() => import('pages/component-overview/typography')));
 const Shadow = Loadable(lazy(() => import('pages/component-overview/shadows')));
 
-// render - sample page
-const SamplePage = Loadable(lazy(() => import('pages/extra-pages/sample-page')));
+// render - check out page
+const CheckOut = Loadable(lazy(() => import('pages/extra-pages/checkOut')));
 
 // ==============================|| MAIN ROUTING ||============================== //
 
@@ -47,8 +47,9 @@ const MainRoutes = {
       element: <Shadow />
     },
     {
-      path: 'sample-page',
-      element: <SamplePage />
+      path: 'check-out',
+      element: <CheckOut />
+
     }
   ]
 };

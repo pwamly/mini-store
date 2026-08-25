@@ -1,5 +1,6 @@
 // assets
 import {
+  DashboardOutlined,
   ShoppingCartOutlined,
   ShoppingOutlined,
   DollarCircleOutlined,
@@ -7,11 +8,23 @@ import {
   TrophyOutlined,
   TransactionOutlined,
   TeamOutlined,
-  LineChartOutlined
+  BarChartOutlined,
+  InboxOutlined,
+  AppstoreOutlined,
+  FileTextOutlined,
+  SettingOutlined,
+  ShopOutlined,
+  ScanOutlined,
+  RollbackOutlined,
+  ApartmentOutlined,
+  SafetyCertificateOutlined,
+  PrinterOutlined,
+  WalletOutlined
 } from '@ant-design/icons';
 
 // icons
 const icons = {
+  DashboardOutlined,
   ShoppingCartOutlined,
   ShoppingOutlined,
   DollarCircleOutlined,
@@ -19,30 +32,145 @@ const icons = {
   TrophyOutlined,
   TransactionOutlined,
   TeamOutlined,
-  LineChartOutlined
+  BarChartOutlined,
+  InboxOutlined,
+  AppstoreOutlined,
+  FileTextOutlined,
+  SettingOutlined,
+  ShopOutlined,
+  ScanOutlined,
+  RollbackOutlined,
+  ApartmentOutlined,
+  SafetyCertificateOutlined,
+  PrinterOutlined,
+  WalletOutlined
 };
 
-// ==============================|| MENU ITEMS - NAVIGATIONS ||============================== //
+// ==============================|| MENU ITEMS ||============================== //
 
 const navigations = {
-  id: 'navigations',
-  title: 'Navigations',
+  id: 'navigation',
+  title: 'MINIMART POS',
   type: 'group',
   children: [
+    // ================= DASHBOARD =================
     {
-      id: 'today-sales',
-      title: 'Today’s Sales',
+      id: 'dashboard',
+      title: 'Dashboard',
       type: 'item',
-      url: '/store',
-      icon: icons.LineChartOutlined
+      url: '/dashboard',
+      icon: icons.DashboardOutlined
     },
+
+    // ================= CASHIER / POS =================
     {
-      id: 'orders-count',
-      title: 'Orders Count',
+      id: 'pos',
+      title: 'POS Checkout',
       type: 'item',
-      url: '/orders',
+      url: '/check-out',
       icon: icons.ShoppingCartOutlined
     },
+
+    // ================= ORDERS =================
+    {
+      id: 'orders',
+      title: 'Orders',
+      type: 'item',
+      url: '/orders',
+      icon: icons.TransactionOutlined
+    },
+
+    // ================= RETURNS =================
+    {
+      id: 'returns',
+      title: 'Returns',
+      type: 'item',
+      url: '/returns',
+      icon: icons.RollbackOutlined
+    },
+
+    // ================= PRODUCTS =================
+    {
+      id: 'products',
+      title: 'Products',
+      type: 'item',
+      url: '/products',
+      icon: icons.ShoppingOutlined
+    },
+
+    // ================= CATEGORIES =================
+    {
+      id: 'categories',
+      title: 'Categories',
+      type: 'item',
+      url: '/categories',
+      icon: icons.AppstoreOutlined
+    },
+
+    // ================= INVENTORY =================
+    {
+      id: 'inventory',
+      title: 'Inventory',
+      type: 'item',
+      url: '/inventory',
+      icon: icons.InboxOutlined
+    },
+
+    // ================= LOW STOCK =================
+    {
+      id: 'low-stock',
+      title: 'Low Stock Alerts',
+      type: 'item',
+      url: '/low-stock',
+      icon: icons.WarningOutlined
+    },
+
+    // ================= BARCODE =================
+    {
+      id: 'barcode-scanner',
+      title: 'Barcode Scanner',
+      type: 'item',
+      url: '/barcode-scanner',
+      icon: icons.ScanOutlined
+    },
+
+    // ================= SUPPLIERS =================
+    {
+      id: 'suppliers',
+      title: 'Suppliers',
+      type: 'item',
+      url: '/suppliers',
+      icon: icons.ShopOutlined
+    },
+
+    // ================= PURCHASE ORDERS =================
+    {
+      id: 'purchase-orders',
+      title: 'Purchase Orders',
+      type: 'item',
+      url: '/purchase-orders',
+      icon: icons.FileTextOutlined
+    },
+
+    // ================= EXPENSES =================
+    {
+      id: 'expenses',
+      title: 'Expenses',
+      type: 'item',
+      url: '/expenses',
+      icon: icons.WalletOutlined
+    },
+
+    // ================= CUSTOMERS =================
+    {
+      id: 'customers',
+      title: 'Customers',
+      type: 'item',
+      url: '/customers',
+      icon: icons.TeamOutlined
+    },
+
+    // ================= REVENUE =================
     {
       id: 'revenue',
       title: 'Revenue',
@@ -50,40 +178,59 @@ const navigations = {
       url: '/revenue',
       icon: icons.DollarCircleOutlined
     },
+
+    // ================= ANALYTICS =================
     {
-      id: 'low-stock-alerts',
-      title: 'Low Stock Alerts',
+      id: 'analytics',
+      title: 'Analytics',
       type: 'item',
-      url: '/low-stock',
-      icon: icons.WarningOutlined
+      url: '/analytics',
+      icon: icons.BarChartOutlined
     },
+
+    // ================= TOP SELLING =================
     {
-      id: 'top-selling-products',
-      title: 'Top-selling Products',
+      id: 'top-selling',
+      title: 'Top Selling Products',
       type: 'item',
       url: '/top-selling',
       icon: icons.TrophyOutlined
     },
+
+    // ================= USER ROLES =================
     {
-      id: 'recent-transactions',
-      title: 'Recent Transactions',
+      id: 'roles',
+      title: 'User Roles',
       type: 'item',
-      url: '/recent-transactions',
-      icon: icons.TransactionOutlined
+      url: '/roles',
+      icon: icons.SafetyCertificateOutlined
     },
+
+    // ================= MULTI BRANCH =================
     {
-      id: 'staff-activity',
-      title: 'Staff Activity',
+      id: 'branches',
+      title: 'Multi Branch',
       type: 'item',
-      url: '/staff-activity',
-      icon: icons.TeamOutlined
+      url: '/branches',
+      icon: icons.ApartmentOutlined
     },
+
+    // ================= RECEIPT PRINTING =================
     {
-      id: 'products',
-      title: 'Products',
+      id: 'receipt-printing',
+      title: 'Receipt Printing',
       type: 'item',
-      url: '/products',
-      icon: icons.ShoppingOutlined
+      url: '/receipt-printing',
+      icon: icons.PrinterOutlined
+    },
+
+    // ================= SETTINGS =================
+    {
+      id: 'settings',
+      title: 'Settings',
+      type: 'item',
+      url: '/settings',
+      icon: icons.SettingOutlined
     }
   ]
 };
