@@ -12,7 +12,6 @@ import {
   Grid,
   List,
   ListItem,
-  ListItemText,
   MenuItem,
   Select,
   Stack,
@@ -22,12 +21,63 @@ import {
 
 import MainCard from 'components/MainCard';
 
-import { Html5Qrcode } from 'html5-qrcode';
+import {
+  Html5Qrcode,
+  Html5QrcodeSupportedFormats
+} from 'html5-qrcode';
 
 export default function CheckOut() {
-  // =====================================================
+  // =========================================================
+  // DUMMY PRODUCTS
+  // =========================================================
+
+  const products = [
+  {
+    id: 1,
+    barcode: '6161101661447',
+    sku: 'MAR-PRESTIGE-VAN-500G',
+    name: 'Prestige Margarine',
+    brand: 'Prestige',
+    variant: 'Vanilla Flavour',
+    type: 'Fat Spread / Margarine',
+    category: 'Margarine & Spreads',
+    weight: '500g',
+    unit: 'Tub',
+    price: 5500
+  },
+
+  {
+    id: 2,
+    barcode: '5053990161966',
+    sku: 'SNP-PRINGLES-BBQ-165G',
+    name: 'Pringles Barbeque',
+    brand: 'Pringles',
+    variant: 'Barbeque',
+    type: 'Stacked Potato Crisps',
+    category: 'Crisps & Chips',
+    weight: '165g',
+    unit: 'Can',
+    price: 7500
+  },
+
+  {
+    id: 3,
+    barcode: '8904022916344',
+    sku: 'BIS-BONN-BOURBON-60G',
+    name: 'Bonn Classic Bourbon',
+    brand: 'Bonn',
+    variant: 'Chocolate Cream',
+    type: 'Chocolate Cream Sandwich Biscuit',
+    category: 'Biscuits & Cookies',
+    weight: '60g',
+    unit: 'Packet',
+    price: 1000
+  }
+];
+
+  // =========================================================
   // STATE
-  // =====================================================
+  // =========================================================
 
   const [cartItems, setCartItems] = useState([]);
 
@@ -59,14 +109,36 @@ export default function CheckOut() {
 
   const scanProcessingRef = useRef(false);
 
-  // =====================================================
-  // OPEN CAMERA SCANNER
-  // =====================================================
+  // =========================================================
+  // FORMAT TZS
+  // =========================================================
+
+  const formatTZS = (amount) => {
+    return new Intl.NumberFormat('en-TZ', {
+      style: 'currency',
+      currency: 'TZS',
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0
+    }).format(amount);
+  };
+
+  // =========================================================
+  // OPEN SCANNER
+  // =========================================================
 
   const handleOpenScanner = () => {
     setError('');
-
     setScannerError('');
+
+    if (!window.isSecureContext) {
+      setScannerOpen(true);
+
+      setScannerError(
+        'Camera access requires HTTPS or localhost.'
+      );
+
+      return;
+    }
 
     setScannerOpen(true);
 
@@ -75,55 +147,58 @@ export default function CheckOut() {
     }, 500);
   };
 
-  // =====================================================
-  // START CAMERA
-  // =====================================================
+  // =========================================================
+  // START CAMERA SCANNER
+  // =========================================================
 
   const startScanner = async () => {
     try {
       setScannerLoading(true);
-
       setScannerError('');
 
-      /*
-       * Check browser camera support.
-       */
+      if (!window.isSecureContext) {
+        throw new Error(
+          'Camera requires HTTPS or localhost.'
+        );
+      }
 
       if (
         !navigator.mediaDevices ||
         !navigator.mediaDevices.getUserMedia
       ) {
         throw new Error(
-          'Camera API is not available. Use HTTPS or localhost.'
+          'Camera is not supported by this browser.'
         );
       }
 
-      /*
-       * Check whether the scanner element exists.
-       */
+      const reader =
+        document.getElementById('barcode-reader');
 
-      const readerElement =
-        document.getElementById(
-          'barcode-reader'
-        );
-
-      if (!readerElement) {
+      if (!reader) {
         throw new Error(
-          'Scanner element was not found.'
+          'Barcode scanner element was not found.'
         );
       }
 
-      /*
-       * Prevent multiple scanner instances.
-       */
-
+      // Clean up an existing scanner
       if (scannerRef.current) {
-        await stopScanner();
-      }
+        try {
+          if (
+            scannerRef.current.isScanning
+          ) {
+            await scannerRef.current.stop();
+          }
 
-      /*
-       * Create scanner.
-       */
+          await scannerRef.current.clear();
+        } catch (cleanupError) {
+          console.log(
+            'Scanner cleanup:',
+            cleanupError
+          );
+        }
+
+        scannerRef.current = null;
+      }
 
       const scanner = new Html5Qrcode(
         'barcode-reader'
@@ -131,185 +206,148 @@ export default function CheckOut() {
 
       scannerRef.current = scanner;
 
-      /*
-       * Start camera.
-       *
-       * facingMode environment =
-       * back camera on phones.
-       */
+      // Barcode formats
+      const formats = [
+        Html5QrcodeSupportedFormats.EAN_13,
+        Html5QrcodeSupportedFormats.EAN_8,
+        Html5QrcodeSupportedFormats.UPC_A,
+        Html5QrcodeSupportedFormats.UPC_E,
+        Html5QrcodeSupportedFormats.CODE_128,
+        Html5QrcodeSupportedFormats.CODE_39,
+        Html5QrcodeSupportedFormats.CODE_93,
+        Html5QrcodeSupportedFormats.ITF
+      ];
+
+      const config = {
+        fps: 10,
+
+        qrbox: (width, height) => {
+          const scanWidth = Math.min(
+            width * 0.9,
+            360
+          );
+
+          const scanHeight = Math.min(
+            height * 0.4,
+            180
+          );
+
+          return {
+            width: scanWidth,
+            height: scanHeight
+          };
+        },
+
+        aspectRatio: 1.777778,
+
+        disableFlip: false,
+
+        formatsToSupport: formats,
+
+        experimentalFeatures: {
+          useBarCodeDetectorIfSupported: false
+        }
+      };
+
+      const onScanSuccess = async (
+        decodedText,
+        decodedResult
+      ) => {
+        if (scanProcessingRef.current) {
+          return;
+        }
+
+        scanProcessingRef.current = true;
+
+        console.log(
+          'BARCODE DETECTED:',
+          decodedText
+        );
+
+        console.log(
+          'BARCODE FORMAT:',
+          decodedResult?.result?.format
+            ?.formatName
+        );
+
+        try {
+          await stopScanner();
+
+          setScannerOpen(false);
+
+          setBarcode(decodedText);
+
+          await scanProduct(decodedText);
+        } catch (scanError) {
+          console.error(
+            'Scan error:',
+            scanError
+          );
+        } finally {
+          scanProcessingRef.current = false;
+        }
+      };
+
+      const onScanFailure = () => {
+        // Scanner keeps searching.
+      };
 
       await scanner.start(
         {
           facingMode: 'environment'
         },
-        {
-          fps: 10,
 
-          qrbox: {
-            width: 300,
-            height: 150
-          },
+        config,
 
-          aspectRatio: 1.777778,
+        onScanSuccess,
 
-          disableFlip: false
-        },
-
-        /*
-         * ==========================================
-         * BARCODE DETECTED
-         * ==========================================
-         */
-
-        async (decodedText) => {
-          /*
-           * Prevent multiple detections of
-           * the same barcode while processing.
-           */
-
-          if (scanProcessingRef.current) {
-            return;
-          }
-
-          scanProcessingRef.current = true;
-
-          console.log(
-            'Barcode detected:',
-            decodedText
-          );
-
-          try {
-            await stopScanner();
-
-            setScannerOpen(false);
-
-            setBarcode(decodedText);
-
-            await scanProduct(decodedText);
-          } catch (err) {
-            console.error(
-              'Barcode processing error:',
-              err
-            );
-          } finally {
-            scanProcessingRef.current = false;
-          }
-        },
-
-        /*
-         * ==========================================
-         * SCANNING CALLBACK
-         * ==========================================
-         *
-         * This is called continuously while
-         * looking for a barcode.
-         */
-
-        () => {
-          // Don't display scanning errors.
-        }
+        onScanFailure
       );
 
       setScannerLoading(false);
-
-      console.log(
-        'Camera scanner started successfully'
-      );
-    } catch (err) {
+    } catch (cameraError) {
       console.error(
-        'Camera scanner error:',
-        err
+        'Camera error:',
+        cameraError
       );
 
       setScannerLoading(false);
 
       let message =
-        'Unable to start the camera.';
-
-      /*
-       * ==========================================
-       * SECURE CONTEXT
-       * ==========================================
-       */
+        'Unable to start camera.';
 
       if (!window.isSecureContext) {
         message =
-          'Camera access requires HTTPS or localhost. If you are opening the POS from your phone using http://192.168.x.x, enable HTTPS for your Vite server.';
-      }
-
-      /*
-       * ==========================================
-       * PERMISSION
-       * ==========================================
-       */
-
-      else if (
-        err?.name ===
+          'Camera access requires HTTPS or localhost.';
+      } else if (
+        cameraError?.name ===
         'NotAllowedError'
       ) {
         message =
-          'Camera permission was denied. Please allow camera access in your browser settings and try again.';
-      }
-
-      /*
-       * ==========================================
-       * CAMERA NOT FOUND
-       * ==========================================
-       */
-
-      else if (
-        err?.name === 'NotFoundError'
+          'Camera permission was denied. Please allow camera access.';
+      } else if (
+        cameraError?.name ===
+        'NotFoundError'
       ) {
         message =
-          'No camera was found on this device.';
-      }
-
-      /*
-       * ==========================================
-       * CAMERA BUSY
-       * ==========================================
-       */
-
-      else if (
-        err?.name ===
+          'No camera was found.';
+      } else if (
+        cameraError?.name ===
         'NotReadableError'
       ) {
         message =
-          'The camera is already being used by another application. Close other camera applications and try again.';
-      }
-
-      /*
-       * ==========================================
-       * SECURITY
-       * ==========================================
-       */
-
-      else if (
-        err?.name ===
-        'SecurityError'
-      ) {
-        message =
-          'The browser blocked camera access for security reasons. Use HTTPS or localhost.';
-      }
-
-      /*
-       * ==========================================
-       * UNKNOWN ERROR
-       * ==========================================
-       */
-
-      else if (err?.message) {
-        message =
-          `Camera error: ${err.message}`;
+          'Camera is already being used by another application.';
+      } else if (cameraError?.message) {
+        message = cameraError.message;
       }
 
       setScannerError(message);
     }
   };
 
-  // =====================================================
-  // STOP CAMERA
-  // =====================================================
+  // =========================================================
+  // STOP SCANNER
+  // =========================================================
 
   const stopScanner = async () => {
     const scanner = scannerRef.current;
@@ -324,19 +362,19 @@ export default function CheckOut() {
       }
 
       await scanner.clear();
-    } catch (err) {
+    } catch (error) {
       console.error(
-        'Error stopping scanner:',
-        err
+        'Stop scanner error:',
+        error
       );
     }
 
     scannerRef.current = null;
   };
 
-  // =====================================================
-  // CLOSE CAMERA DIALOG
-  // =====================================================
+  // =========================================================
+  // CLOSE SCANNER
+  // =========================================================
 
   const handleCloseScanner = async () => {
     await stopScanner();
@@ -351,22 +389,16 @@ export default function CheckOut() {
 
     setTimeout(() => {
       barcodeInputRef.current?.focus();
-    }, 200);
+    }, 300);
   };
 
-  // =====================================================
-  // MANUAL BARCODE INPUT
-  // =====================================================
+  // =========================================================
+  // BARCODE INPUT
+  // =========================================================
 
-  const handleBarcodeChange = (
-    event
-  ) => {
+  const handleBarcodeChange = (event) => {
     setBarcode(event.target.value);
   };
-
-  // =====================================================
-  // BARCODE ENTER
-  // =====================================================
 
   const handleBarcodeKeyDown = async (
     event
@@ -386,216 +418,153 @@ export default function CheckOut() {
     await scanProduct(code);
   };
 
-  // =====================================================
-  // FIND PRODUCT BY BARCODE
-  // =====================================================
+  // =========================================================
+  // FIND PRODUCT
+  // =========================================================
 
-  const scanProduct = async (
-    code
-  ) => {
-    try {
-      setError('');
+  const scanProduct = async (code) => {
+    const cleanCode = String(code).trim();
 
-      setLoadingProduct(true);
+    if (!cleanCode) {
+      return;
+    }
 
-      /*
-       * IMPORTANT:
-       *
-       * Change this URL to your real API.
-       *
-       * Example:
-       *
-       * GET /api/products/barcode/123456789
-       */
+    setError('');
 
-      const response = await fetch(
-        `/api/products/barcode/${encodeURIComponent(
-          code
-        )}`
+    setLoadingProduct(true);
+
+    // Simulate product lookup
+    await new Promise((resolve) =>
+      setTimeout(resolve, 300)
+    );
+
+    const product = products.find(
+      (item) =>
+        String(item.barcode) === cleanCode
+    );
+
+    if (!product) {
+      setError(
+        `Product with barcode "${cleanCode}" was not found.`
       );
 
-      if (!response.ok) {
-        throw new Error(
-          'Product not found'
+      setLoadingProduct(false);
+
+      setBarcode('');
+
+      setTimeout(() => {
+        barcodeInputRef.current?.focus();
+      }, 100);
+
+      return;
+    }
+
+    addToCart(product);
+
+    setBarcode('');
+
+    setLoadingProduct(false);
+
+    setTimeout(() => {
+      barcodeInputRef.current?.focus();
+    }, 100);
+  };
+
+  // =========================================================
+  // ADD PRODUCT TO CART
+  // =========================================================
+
+  const addToCart = (product) => {
+    setCartItems((currentItems) => {
+      const existing = currentItems.find(
+        (item) =>
+          String(item.id) ===
+          String(product.id)
+      );
+
+      if (existing) {
+        return currentItems.map((item) =>
+          String(item.id) ===
+          String(product.id)
+            ? {
+                ...item,
+                qty: item.qty + 1
+              }
+            : item
         );
       }
 
-      const product =
-        await response.json();
-
-      console.log(
-        'Product found:',
-        product
-      );
-
-      /*
-       * Expected response:
-       *
-       * {
-       *   id: 1,
-       *   name: "Coffee",
-       *   barcode: "123456789",
-       *   price: 5
-       * }
-       */
-
-      addToCart(product);
-
-      setBarcode('');
-
-      setTimeout(() => {
-        barcodeInputRef.current?.focus();
-      }, 100);
-    } catch (err) {
-      console.error(
-        'Product lookup error:',
-        err
-      );
-
-      setError(
-        `Product with barcode "${code}" was not found.`
-      );
-
-      setBarcode('');
-
-      setTimeout(() => {
-        barcodeInputRef.current?.focus();
-      }, 100);
-    } finally {
-      setLoadingProduct(false);
-    }
+      return [
+        ...currentItems,
+        {
+          ...product,
+          qty: 1
+        }
+      ];
+    });
   };
 
-  // =====================================================
-  // ADD PRODUCT TO CART
-  // =====================================================
+  // =========================================================
+  // INCREASE QUANTITY
+  // =========================================================
 
-  const addToCart = (product) => {
-    setCartItems(
-      (currentItems) => {
-        const existingItem =
-          currentItems.find(
-            (item) =>
-              item.id === product.id
-          );
-
-        /*
-         * Product already exists.
-         * Increase quantity.
-         */
-
-        if (existingItem) {
-          return currentItems.map(
-            (item) =>
-              item.id === product.id
-                ? {
-                    ...item,
-                    qty:
-                      item.qty + 1
-                  }
-                : item
-          );
-        }
-
-        /*
-         * New product.
-         */
-
-        return [
-          ...currentItems,
-
-          {
-            id: product.id,
-
-            name: product.name,
-
-            barcode:
-              product.barcode,
-
-            price: Number(
-              product.price
-            ),
-
-            qty: 1
-          }
-        ];
-      }
+  const increaseQuantity = (id) => {
+    setCartItems((items) =>
+      items.map((item) =>
+        String(item.id) === String(id)
+          ? {
+              ...item,
+              qty: item.qty + 1
+            }
+          : item
+      )
     );
   };
 
-  // =====================================================
-  // INCREASE QUANTITY
-  // =====================================================
+  // =========================================================
+  // DECREASE QUANTITY
+  // =========================================================
 
-  const increaseQuantity = (
-    id
-  ) => {
-    setCartItems(
-      (items) =>
-        items.map((item) =>
-          item.id === id
+  const decreaseQuantity = (id) => {
+    setCartItems((items) =>
+      items
+        .map((item) =>
+          String(item.id) === String(id)
             ? {
                 ...item,
-                qty:
-                  item.qty + 1
+                qty: item.qty - 1
               }
             : item
         )
+        .filter((item) => item.qty > 0)
     );
   };
 
-  // =====================================================
-  // DECREASE QUANTITY
-  // =====================================================
-
-  const decreaseQuantity = (
-    id
-  ) => {
-    setCartItems(
-      (items) =>
-        items
-          .map((item) =>
-            item.id === id
-              ? {
-                  ...item,
-                  qty:
-                    item.qty - 1
-                }
-              : item
-          )
-          .filter(
-            (item) =>
-              item.qty > 0
-          )
-    );
-  };
-
-  // =====================================================
+  // =========================================================
   // REMOVE ITEM
-  // =====================================================
+  // =========================================================
 
   const removeItem = (id) => {
-    setCartItems(
-      (items) =>
-        items.filter(
-          (item) =>
-            item.id !== id
-        )
+    setCartItems((items) =>
+      items.filter(
+        (item) =>
+          String(item.id) !== String(id)
+      )
     );
   };
 
-  // =====================================================
+  // =========================================================
   // CLEAR CART
-  // =====================================================
+  // =========================================================
 
   const clearCart = () => {
     setCartItems([]);
 
+    setBarcode('');
+
     setCustomerName('');
 
     setPaymentMethod('cash');
-
-    setBarcode('');
 
     setError('');
 
@@ -604,122 +573,105 @@ export default function CheckOut() {
     }, 200);
   };
 
-  // =====================================================
-  // CALCULATIONS
-  // =====================================================
+  // =========================================================
+  // TOTALS
+  // =========================================================
 
-  const subtotal =
-    cartItems.reduce(
-      (sum, item) =>
-        sum +
-        item.qty *
-          item.price,
-      0
-    );
+  const subtotal = cartItems.reduce(
+    (sum, item) =>
+      sum +
+      item.qty *
+        Number(item.price),
+    0
+  );
 
-  const tax = subtotal * 0.1;
+  // =========================================================
+  // TAX
+  // =========================================================
 
-  const total =
-    subtotal + tax;
+  // Tax is intentionally 0 for now.
+  // You can change this later when you are ready.
+  const tax = 0;
 
-  // =====================================================
+  // =========================================================
+  // TOTAL
+  // =========================================================
+
+  const total = subtotal + tax;
+
+  // =========================================================
   // COMPLETE SALE
-  // =====================================================
+  // =========================================================
 
-  const completeSale =
-    async () => {
-      if (
-        cartItems.length ===
-        0
-      ) {
-        setError(
-          'Please add at least one product to the cart.'
-        );
-
-        return;
-      }
-
-      const sale = {
-        customerName,
-
-        paymentMethod,
-
-        items: cartItems.map(
-          (item) => ({
-            productId:
-              item.id,
-
-            barcode:
-              item.barcode,
-
-            quantity:
-              item.qty,
-
-            price:
-              item.price
-          })
-        ),
-
-        subtotal,
-
-        tax,
-
-        total
-      };
-
-      console.log(
-        'SALE:',
-        sale
+  const completeSale = () => {
+    if (cartItems.length === 0) {
+      setError(
+        'Please scan a product first.'
       );
 
-      /*
-       * Connect your API here:
-       *
-       * const response =
-       *   await fetch('/api/sales', {
-       *     method: 'POST',
-       *     headers: {
-       *       'Content-Type':
-       *         'application/json'
-       *     },
-       *     body:
-       *       JSON.stringify(sale)
-       *   });
-       */
+      return;
+    }
 
-      alert(
-        'Sale completed successfully'
-      );
+    const sale = {
+      customerName,
+      paymentMethod,
+      items: cartItems,
 
-      clearCart();
+      subtotal,
+
+      tax: 0,
+
+      total
     };
 
-  // =====================================================
+    console.log(
+      'SALE:',
+      sale
+    );
+
+    alert(
+      'Sale completed successfully!'
+    );
+
+    clearCart();
+  };
+
+  // =========================================================
   // PRINT RECEIPT
-  // =====================================================
+  // =========================================================
 
   const printReceipt = () => {
     window.print();
   };
 
-  // =====================================================
+  // =========================================================
   // UI
-  // =====================================================
+  // =========================================================
 
   return (
     <MainCard title="POS Checkout">
-      <Grid container spacing={3}>
+      <Grid
+        container
+        spacing={3}
+      >
         {/* =================================================
-            BARCODE SECTION
+            SCAN PRODUCT
         ================================================= */}
 
-        <Grid item xs={12}>
+        <Grid
+          item
+          xs={12}
+        >
           <Box
             sx={{
-              p: 2,
+              p: {
+                xs: 2,
+                sm: 3
+              },
 
-              backgroundColor:
-                'background.default',
+              border: '1px solid',
+
+              borderColor: 'divider',
 
               borderRadius: 2
             }}
@@ -730,8 +682,6 @@ export default function CheckOut() {
             >
               Scan Product
             </Typography>
-
-            {/* ERROR */}
 
             {error && (
               <Alert
@@ -746,8 +696,6 @@ export default function CheckOut() {
                 {error}
               </Alert>
             )}
-
-            {/* INPUT + BUTTON */}
 
             <Stack
               direction={{
@@ -778,7 +726,6 @@ export default function CheckOut() {
 
               <Button
                 variant="contained"
-                color="primary"
                 size="large"
                 onClick={
                   handleOpenScanner
@@ -805,9 +752,10 @@ export default function CheckOut() {
                 mt: 1
               }}
             >
-              Scan using your camera,
-              barcode scanner, or enter
-              the barcode manually.
+              Test barcode:{' '}
+              <strong>
+                6161101661447
+              </strong>
             </Typography>
           </Box>
         </Grid>
@@ -833,8 +781,7 @@ export default function CheckOut() {
               Order Items
             </Typography>
 
-            {cartItems.length >
-              0 && (
+            {cartItems.length > 0 && (
               <Button
                 color="error"
                 size="small"
@@ -847,90 +794,148 @@ export default function CheckOut() {
             )}
           </Stack>
 
-          {/* EMPTY */}
-
-          {cartItems.length ===
-          0 ? (
+          {cartItems.length === 0 ? (
             <Box
               sx={{
                 py: 6,
-
-                textAlign:
-                  'center',
-
-                border:
-                  '1px dashed',
-
+                px: 2,
+                textAlign: 'center',
+                border: '1px dashed',
                 borderColor:
                   'divider',
-
                 borderRadius: 2
               }}
             >
               <Typography
                 color="text.secondary"
-                gutterBottom
               >
-                Your cart is
-                empty
+                Cart is empty
               </Typography>
 
               <Typography
                 variant="body2"
                 color="text.secondary"
+                sx={{
+                  mt: 1
+                }}
               >
-                Scan a product
-                to add it to
-                the cart
+                Scan barcode{' '}
+                <strong>
+                  6161101661447
+                </strong>{' '}
+                to test.
               </Typography>
             </Box>
           ) : (
-            <List>
+            <List
+              disablePadding
+              sx={{
+                width: '100%'
+              }}
+            >
               {cartItems.map(
                 (item) => (
                   <ListItem
                     key={item.id}
                     divider
+                    disableGutters
                     sx={{
                       py: 2,
 
-                      flexWrap: {
-                        xs: 'wrap',
-                        sm: 'nowrap'
-                      }
+                      display: 'flex',
+
+                      flexWrap: 'wrap',
+
+                      alignItems:
+                        'flex-start',
+
+                      gap: 1
                     }}
                   >
                     {/* PRODUCT */}
 
-                    <ListItemText
+                    <Box
                       sx={{
+                        flex:
+                          '1 1 180px',
+
                         minWidth: 0,
-                        flex: 1
+
+                        pr: 1
                       }}
-                      primary={
-                        <Typography
-                          fontWeight="bold"
-                        >
-                          {
-                            item.name
-                          }
-                        </Typography>
-                      }
-                      secondary={
-                        <>
-                          Barcode:{' '}
-                          {
-                            item.barcode
-                          }
-                          <br />
-                          $
-                          {item.price.toFixed(
-                            2
-                          )}{' '}
-                          each
-                        </>
-                      }
-                    />
+                    >
+                      <Typography
+                        fontWeight="bold"
+                        sx={{
+                          wordBreak:
+                            'break-word'
+                        }}
+                      >
+                        {item.name}
+                      </Typography>
+
+                      <Typography
+                        variant="body2"
+                        color="text.secondary"
+                      >
+                        {item.brand} -{' '}
+                        {item.variant}
+                      </Typography>
+
+                      <Typography
+                        variant="body2"
+                        color="text.secondary"
+                      >
+                        {item.weight}
+                      </Typography>
+
+                      <Typography
+                        variant="caption"
+                        color="text.secondary"
+                        sx={{
+                          display:
+                            'block',
+                          wordBreak:
+                            'break-all'
+                        }}
+                      >
+                        Barcode:{' '}
+                        {item.barcode}
+                      </Typography>
+                    </Box>
+
+                    {/* UNIT PRICE */}
+
+                    <Box
+                      sx={{
+                        flex: {
+                          xs:
+                            '1 1 100%',
+                          sm:
+                            '0 0 auto'
+                        },
+
+                        order: {
+                          xs: 3,
+                          sm: 0
+                        }
+                      }}
+                    >
+                      <Typography
+                        variant="body2"
+                        color="text.secondary"
+                      >
+                        Unit price
+                      </Typography>
+
+                      <Typography
+                        fontWeight="bold"
+                      >
+                        {formatTZS(
+                          item.price
+                        )}
+                      </Typography>
+                    </Box>
 
                     {/* QUANTITY */}
 
@@ -939,15 +944,8 @@ export default function CheckOut() {
                       spacing={1}
                       alignItems="center"
                       sx={{
-                        mr: {
-                          xs: 0,
-                          sm: 2
-                        },
-
-                        mt: {
-                          xs: 1,
-                          sm: 0
-                        }
+                        flex:
+                          '0 0 auto'
                       }}
                     >
                       <Button
@@ -959,7 +957,10 @@ export default function CheckOut() {
                           )
                         }
                         sx={{
-                          minWidth: 35
+                          minWidth: 36,
+                          width: 36,
+                          height: 36,
+                          p: 0
                         }}
                       >
                         −
@@ -967,18 +968,14 @@ export default function CheckOut() {
 
                       <Typography
                         sx={{
-                          minWidth: 30,
-
+                          minWidth: 28,
                           textAlign:
                             'center',
-
                           fontWeight:
                             'bold'
                         }}
                       >
-                        {
-                          item.qty
-                        }
+                        {item.qty}
                       </Typography>
 
                       <Button
@@ -990,39 +987,57 @@ export default function CheckOut() {
                           )
                         }
                         sx={{
-                          minWidth: 35
+                          minWidth: 36,
+                          width: 36,
+                          height: 36,
+                          p: 0
                         }}
                       >
                         +
                       </Button>
                     </Stack>
 
-                    {/* TOTAL */}
+                    {/* ITEM TOTAL */}
 
-                    <Typography
+                    <Box
                       sx={{
-                        minWidth: 90,
+                        flex:
+                          '0 0 auto',
+
+                        minWidth: {
+                          xs: 100,
+                          sm: 110
+                        },
 
                         textAlign:
-                          'right',
-
-                        fontWeight:
-                          'bold'
+                          'right'
                       }}
                     >
-                      $
-                      {(
-                        item.qty *
-                        item.price
-                      ).toFixed(
-                        2
-                      )}
-                    </Typography>
+                      <Typography
+                        variant="body2"
+                        color="text.secondary"
+                      >
+                        Total
+                      </Typography>
+
+                      <Typography
+                        fontWeight="bold"
+                        color="primary"
+                      >
+                        {formatTZS(
+                          item.qty *
+                            Number(
+                              item.price
+                            )
+                        )}
+                      </Typography>
+                    </Box>
 
                     {/* REMOVE */}
 
                     <Button
                       color="error"
+                      variant="outlined"
                       size="small"
                       onClick={() =>
                         removeItem(
@@ -1030,9 +1045,26 @@ export default function CheckOut() {
                         )
                       }
                       sx={{
-                        ml: {
+                        flex: {
+                          xs:
+                            '1 1 100%',
+                          sm:
+                            '0 0 auto'
+                        },
+
+                        width: {
+                          xs: '100%',
+                          sm: 'auto'
+                        },
+
+                        minWidth: {
+                          xs: 0,
+                          sm: 80
+                        },
+
+                        mt: {
                           xs: 1,
-                          sm: 2
+                          sm: 0
                         }
                       }}
                     >
@@ -1046,7 +1078,7 @@ export default function CheckOut() {
         </Grid>
 
         {/* =================================================
-            PAYMENT
+            PAYMENT SUMMARY
         ================================================= */}
 
         <Grid
@@ -1056,13 +1088,14 @@ export default function CheckOut() {
         >
           <Box
             sx={{
-              p: 3,
+              p: {
+                xs: 2,
+                sm: 3
+              },
 
-              border:
-                '1px solid',
+              border: '1px solid',
 
-              borderColor:
-                'divider',
+              borderColor: 'divider',
 
               borderRadius: 2
             }}
@@ -1079,7 +1112,6 @@ export default function CheckOut() {
 
               <TextField
                 label="Customer Name"
-                fullWidth
                 value={
                   customerName
                 }
@@ -1089,9 +1121,10 @@ export default function CheckOut() {
                       .value
                   )
                 }
+                fullWidth
               />
 
-              {/* PAYMENT */}
+              {/* PAYMENT METHOD */}
 
               <Select
                 value={
@@ -1125,15 +1158,17 @@ export default function CheckOut() {
               <Box
                 display="flex"
                 justifyContent="space-between"
+                gap={2}
               >
                 <Typography>
                   Subtotal
                 </Typography>
 
-                <Typography>
-                  $
-                  {subtotal.toFixed(
-                    2
+                <Typography
+                  fontWeight="bold"
+                >
+                  {formatTZS(
+                    subtotal
                   )}
                 </Typography>
               </Box>
@@ -1143,16 +1178,14 @@ export default function CheckOut() {
               <Box
                 display="flex"
                 justifyContent="space-between"
+                gap={2}
               >
                 <Typography>
-                  Tax (10%)
+                  Tax
                 </Typography>
 
                 <Typography>
-                  $
-                  {tax.toFixed(
-                    2
-                  )}
+                  {formatTZS(0)}
                 </Typography>
               </Box>
 
@@ -1163,6 +1196,8 @@ export default function CheckOut() {
               <Box
                 display="flex"
                 justifyContent="space-between"
+                alignItems="center"
+                gap={2}
               >
                 <Typography variant="h6">
                   Total
@@ -1171,19 +1206,21 @@ export default function CheckOut() {
                 <Typography
                   variant="h6"
                   color="primary"
+                  sx={{
+                    textAlign:
+                      'right'
+                  }}
                 >
-                  $
-                  {total.toFixed(
-                    2
+                  {formatTZS(
+                    total
                   )}
                 </Typography>
               </Box>
 
-              {/* COMPLETE */}
+              {/* COMPLETE SALE */}
 
               <Button
                 variant="contained"
-                color="primary"
                 size="large"
                 fullWidth
                 disabled={
@@ -1201,7 +1238,6 @@ export default function CheckOut() {
 
               <Button
                 variant="outlined"
-                color="secondary"
                 fullWidth
                 disabled={
                   cartItems.length ===
@@ -1218,9 +1254,9 @@ export default function CheckOut() {
         </Grid>
       </Grid>
 
-      {/* =================================================
-          CAMERA DIALOG
-      ================================================= */}
+      {/* =====================================================
+          CAMERA SCANNER DIALOG
+      ===================================================== */}
 
       <Dialog
         open={scannerOpen}
@@ -1229,14 +1265,28 @@ export default function CheckOut() {
         }
         fullWidth
         maxWidth="sm"
+        fullScreen
+        sx={{
+          '& .MuiDialog-paper': {
+            m: {
+              xs: 0,
+              sm: 2
+            }
+          }
+        }}
       >
         <DialogTitle>
           Scan Product Barcode
         </DialogTitle>
 
-        <DialogContent>
-          {/* CAMERA ERROR */}
-
+        <DialogContent
+          sx={{
+            px: {
+              xs: 1,
+              sm: 3
+            }
+          }}
+        >
           {scannerError && (
             <Alert
               severity="error"
@@ -1248,17 +1298,45 @@ export default function CheckOut() {
             </Alert>
           )}
 
-          {/* CAMERA */}
+          {/* CAMERA VIEW */}
 
           <Box
             sx={{
               width: '100%',
 
-              minHeight: 300,
+              minHeight: {
+                xs: 300,
+                sm: 350
+              },
 
               position: 'relative',
 
-              overflow: 'hidden'
+              overflow: 'hidden',
+
+              backgroundColor: '#000',
+
+              borderRadius: 2,
+
+              '& video': {
+                width:
+                  '100% !important',
+
+                height:
+                  'auto !important',
+
+                objectFit:
+                  'cover'
+              },
+
+              '& canvas': {
+                maxWidth:
+                  '100%'
+              },
+
+              '& #qr-shaded-region': {
+                borderWidth:
+                  '3px !important'
+              }
             }}
           >
             <div
@@ -1268,27 +1346,30 @@ export default function CheckOut() {
               }}
             />
 
-            {/* LOADING */}
-
             {scannerLoading && (
               <Box
                 sx={{
-                  textAlign:
-                    'center',
+                  position:
+                    'absolute',
 
-                  py: 2
+                  bottom: 20,
+
+                  left: 0,
+
+                  right: 0,
+
+                  textAlign:
+                    'center'
                 }}
               >
                 <Typography
-                  color="text.secondary"
+                  color="white"
                 >
                   Starting camera...
                 </Typography>
               </Box>
             )}
           </Box>
-
-          {/* HELP */}
 
           <Typography
             variant="body2"
@@ -1298,29 +1379,44 @@ export default function CheckOut() {
               mt: 2
             }}
           >
-            Point the camera at the
-            product barcode.
+            Point the camera at
+            the barcode.
           </Typography>
 
-          {!window.isSecureContext && (
-            <Alert
-              severity="warning"
-              sx={{
-                mt: 2
-              }}
-            >
-              Camera access requires
-              HTTPS or localhost.
-              If you are testing on a
-              phone, do not use a plain
-              HTTP network address.
-            </Alert>
-          )}
+          <Typography
+            variant="h6"
+            align="center"
+            sx={{
+              mt: 1
+            }}
+          >
+            6161101661447
+          </Typography>
+
+          <Typography
+            variant="caption"
+            color="text.secondary"
+            align="center"
+            sx={{
+              display: 'block',
+              mt: 1
+            }}
+          >
+            Prestige Margarine -
+            Vanilla Flavour - 500g
+          </Typography>
         </DialogContent>
 
-        <DialogActions>
+        <DialogActions
+          sx={{
+            px: 2,
+            pb: 2
+          }}
+        >
           <Button
             color="error"
+            variant="outlined"
+            fullWidth
             onClick={
               handleCloseScanner
             }
