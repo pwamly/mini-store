@@ -13,7 +13,8 @@ const Typography = Loadable(lazy(() => import('pages/component-overview/typograp
 const Shadow = Loadable(lazy(() => import('pages/component-overview/shadows')));
 
 // render - check out page
-const CheckOut = Loadable(lazy(() => import('pages/extra-pages/checkOut')));
+const CheckOut = Loadable(lazy(() => import('pages/checkOut')));
+const ItemRegistration = Loadable(lazy(() => import('pages/ItemRegistration')));
 
 // ==============================|| MAIN ROUTING ||============================== //
 
@@ -49,6 +50,11 @@ const MainRoutes = {
     {
       path: 'check-out',
       element: <CheckOut />
+
+    },
+    {
+      path: 'product-registration',
+      element: <ItemRegistration />
 
     }
   ]

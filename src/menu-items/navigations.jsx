@@ -71,6 +71,14 @@ const navigations = {
       icon: icons.ShoppingCartOutlined
     },
 
+    {
+      id: 'pos',
+      title: 'Product Registration',
+      type: 'item',
+      url: '/product-registration',
+      icon: icons.SafetyCertificateOutlined
+    },
+
     // ================= ORDERS =================
     {
       id: 'orders',
