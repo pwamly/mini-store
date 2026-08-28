@@ -2,7 +2,7 @@
 
 const API_BASE_URL =
   import.meta.env.VITE_API_BASE_URL ||
-  "https://192.168.1.173:5000/api";
+  "https://95.111.255.86:5000/api";
 
 // =====================================================
 // AUTH TOKEN
