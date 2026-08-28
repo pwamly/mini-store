@@ -2,7 +2,7 @@
 
 const API_BASE_URL =
   import.meta.env.VITE_API_BASE_URL ||
-  "http://localhost:5000/api";
+  "https://192.168.1.173:5000/api";
 
 // =====================================================
 // AUTH TOKEN
@@ -12,9 +12,7 @@ const API_BASE_URL =
 // Replace this with your real auth storage later.
 // =====================================================
 
-const AUTH_TOKEN =
-  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6ImEwNWE5YWFmLTI0NTQtNGNkYS05Y2JjLTY1Y2VhNjhmZGNjMyIsImZpcnN0X25hbWUiOiJTdGVwaGFubyIsImxhc3RfbmFtZSI6IlB3YW1seSIsInVzZXJuYW1lIjoic3RlcGhhbm8iLCJlbWFpbCI6InN0ZXBoYW5vQGV4YW1wbGUuY29tIiwidXNlclJvbGUiOiJ1c2VyIiwicGhvbmUiOiIrMjU1NzEyMzQ1Njc4IiwiaWF0IjoxNzg3ODUyMzY3LCJleHAiOjE3ODc4NTQxNjd9.PF36R5Veqdw1dCzGlObPIxpk1yHUXjh7T3r1ebDdPvA";
-
+const AUTH_TOKEN ="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjdhNDFmMzk4LWIyNzQtNDkwOC04OWI0LTQwZWY4YmNmMWE2NiIsImZpcnN0X25hbWUiOiJTdGVwaGFubyIsImxhc3RfbmFtZSI6IkpvaG4iLCJ1c2VybmFtZSI6InN0ZXBoYW5vIiwiZW1haWwiOiJzdGVwaGFub0BleGFtcGxlLmNvbSIsInVzZXJSb2xlIjoiYWRtaW4iLCJwaG9uZSI6IisyNTU3MTIzNDU2NzgiLCJpYXQiOjE3ODc4MTg3MDIsImV4cCI6MTc4Nzg3MjcwMn0.iuuzk49sDpuVJ7QKlk1pJ9IKqGSlqzbpj0G7hfMTDv0"
 // =====================================================
 // COMMON API REQUEST
 // =====================================================
