@@ -57,7 +57,7 @@ export default function AuthLogin({ isDemo = false }) {
       ) => {
         try {
           const response = await fetch(
-            '/api/auth/login',
+            '/auth/login',
             {
               method: 'POST',
               headers: {
