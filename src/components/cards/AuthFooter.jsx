@@ -16,9 +16,9 @@ export default function AuthFooter() {
         sx={{ gap: 2, justifyContent: { xs: 'center', sm: 'space-between' }, textAlign: { xs: 'center', sm: 'inherit' }, py: 2 }}
       >
         <Typography variant="subtitle2" color="secondary">
-          © Made with love by Team{' '}
-          <Link href="https://codedthemes.com/" target="_blank" underline="hover">
-            CodedThemes
+          © Made with love by {' '}
+          <Link href="https://github.com/pwamly/" target="_blank" underline="hover">
+            pwamly
           </Link>
         </Typography>
 
