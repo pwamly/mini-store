@@ -1,18 +1,33 @@
 "use strict";
 
+// =====================================================
+// API BASE URL
+// =====================================================
+//
+// Production:
+// https://necbot.store/api
+//
+// Using a relative URL means the browser talks to the
+// same domain as the React application. Nginx then
+// forwards /api requests to the Node backend on :5000.
+// =====================================================
+
 const API_BASE_URL =
-  import.meta.env.VITE_API_BASE_URL ||
-  "https://95.111.255.86:5000/api";
+  import.meta.env.VITE_API_BASE_URL || "/api";
 
 // =====================================================
 // AUTH TOKEN
 // =====================================================
 //
 // Temporary development token.
-// Replace this with your real auth storage later.
+// IMPORTANT:
+// Do not use a permanent/private token in frontend
+// production code. Anything bundled by Vite is visible
+// to the browser.
 // =====================================================
 
-const AUTH_TOKEN ="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjdhNDFmMzk4LWIyNzQtNDkwOC04OWI0LTQwZWY4YmNmMWE2NiIsImZpcnN0X25hbWUiOiJTdGVwaGFubyIsImxhc3RfbmFtZSI6IkpvaG4iLCJ1c2VybmFtZSI6InN0ZXBoYW5vIiwiZW1haWwiOiJzdGVwaGFub0BleGFtcGxlLmNvbSIsInVzZXJSb2xlIjoiYWRtaW4iLCJwaG9uZSI6IisyNTU3MTIzNDU2NzgiLCJpYXQiOjE3ODc4MTg3MDIsImV4cCI6MTc4Nzg3MjcwMn0.iuuzk49sDpuVJ7QKlk1pJ9IKqGSlqzbpj0G7hfMTDv0"
+const AUTH_TOKEN = "";
+
 // =====================================================
 // COMMON API REQUEST
 // =====================================================
@@ -161,3 +176,4 @@ export const apiDelete = (
 };
 
 export default apiRequest;
+
