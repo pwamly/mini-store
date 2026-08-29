@@ -7,13 +7,22 @@ import path from 'path';
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '');
 
-  const API_URL =
-    env.VITE_APP_BASE_NAME || '/';
+  // React will be served from:
+  // https://necbot.store/mini-store/
+  const API_URL = env.VITE_APP_BASE_NAME || '/';
+
+  const BASE_PATH = API_URL.endsWith('/')
+    ? API_URL
+    : `${API_URL}/`;
 
   const PORT = 3000;
 
   return {
-    base: API_URL,
+    // ==========================================
+    // PRODUCTION BASE PATH
+    // ==========================================
+
+    base: BASE_PATH,
 
     // ==========================================
     // DEVELOPMENT SERVER
@@ -26,7 +35,8 @@ export default defineConfig(({ mode }) => {
 
       host: true,
 
-      // Enable HTTPS for camera access
+      // HTTPS is useful during development,
+      // especially for camera/device APIs.
       https: true
     },
 
@@ -38,6 +48,8 @@ export default defineConfig(({ mode }) => {
       open: true,
 
       host: true,
+
+      port: PORT,
 
       fs: {
         allow: ['..']
@@ -62,8 +74,6 @@ export default defineConfig(({ mode }) => {
           __dirname,
           'node_modules/@ant-design/icons'
         )
-
-        // Add more aliases as needed
       }
     },
 
@@ -76,7 +86,7 @@ export default defineConfig(({ mode }) => {
 
       jsconfigPaths(),
 
-      // HTTPS development certificate
+      // Development HTTPS certificate
       basicSsl()
     ],
 
@@ -93,41 +103,27 @@ export default defineConfig(({ mode }) => {
 
       rollupOptions: {
         output: {
-          chunkFileNames:
-            'js/[name]-[hash].js',
+          chunkFileNames: 'js/[name]-[hash].js',
 
-          entryFileNames:
-            'js/[name]-[hash].js',
+          entryFileNames: 'js/[name]-[hash].js',
 
-          assetFileNames: (
-            assetInfo
-          ) => {
-            const name =
-              assetInfo.name || '';
+          assetFileNames: (assetInfo) => {
+            const name = assetInfo.name || '';
 
-            const ext =
-              name
-                .split('.')
-                .pop();
+            const ext = name.split('.').pop();
 
-            if (
-              /\.css$/.test(name)
-            ) {
+            if (/\.css$/.test(name)) {
               return `css/[name]-[hash].${ext}`;
             }
 
             if (
-              /\.(png|jpe?g|gif|svg|webp|ico)$/.test(
-                name
-              )
+              /\.(png|jpe?g|gif|svg|webp|ico)$/.test(name)
             ) {
               return `images/[name]-[hash].${ext}`;
             }
 
             if (
-              /\.(woff2?|eot|ttf|otf)$/.test(
-                name
-              )
+              /\.(woff2?|eot|ttf|otf)$/.test(name)
             ) {
               return `fonts/[name]-[hash].${ext}`;
             }
@@ -137,9 +133,7 @@ export default defineConfig(({ mode }) => {
         }
       },
 
-      // Only drop console/debugger
-      // in production
-
+      // Production only
       ...(mode === 'production' && {
         esbuild: {
           drop: [
@@ -172,3 +166,4 @@ export default defineConfig(({ mode }) => {
     }
   };
 });
+
