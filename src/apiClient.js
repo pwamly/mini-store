@@ -16,19 +16,6 @@ const API_BASE_URL =
   import.meta.env.VITE_API_BASE_URL || "/api";
 
 // =====================================================
-// AUTH TOKEN
-// =====================================================
-//
-// Temporary development token.
-// IMPORTANT:
-// Do not use a permanent/private token in frontend
-// production code. Anything bundled by Vite is visible
-// to the browser.
-// =====================================================
-
-const AUTH_TOKEN = "";
-
-// =====================================================
 // COMMON API REQUEST
 // =====================================================
 
@@ -42,16 +29,22 @@ const apiRequest = async (
     headers = {}
   } = options;
 
+  // Get the latest access token from localStorage
+  const accessToken =
+    localStorage.getItem("accessToken");
+
   const requestHeaders = {
     "Content-Type": "application/json",
 
-    ...(AUTH_TOKEN
+    // Send Authorization header when token exists
+    ...(accessToken
       ? {
           Authorization:
-            `Bearer ${AUTH_TOKEN}`
+            `Bearer ${accessToken}`
         }
       : {}),
 
+    // Allow individual requests to add/override headers
     ...headers
   };
 
@@ -176,4 +169,3 @@ export const apiDelete = (
 };
 
 export default apiRequest;
-
