@@ -83,6 +83,8 @@ export default function AuthLogin({ isDemo = false }) {
           // Adjust this depending on your API response.
           const token =data.data?.access_token;
 
+          console.log('tttttttttttt',data)
+
           if (!token) {
             throw new Error(
               'Login succeeded but no token was returned'
