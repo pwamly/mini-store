@@ -81,10 +81,7 @@ export default function AuthLogin({ isDemo = false }) {
           }
 
           // Adjust this depending on your API response.
-          const token =
-            data.token ||
-            data.accessToken ||
-            data.data?.token;
+          const token =data.data?.access_token;
 
           if (!token) {
             throw new Error(
