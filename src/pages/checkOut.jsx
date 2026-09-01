@@ -74,8 +74,10 @@ export default function CheckOut() {
 
   const scannerStartingRef = useRef(false);
 
-  // Used to prevent an old search response from replacing
-  // newer search results.
+  // Search debounce timer
+  const searchTimerRef = useRef(null);
+
+  // Prevent old API responses from replacing newer results
   const searchRequestRef = useRef(0);
 
   // =========================================================
@@ -99,6 +101,10 @@ export default function CheckOut() {
     loadProducts();
 
     return () => {
+      if (searchTimerRef.current) {
+        clearTimeout(searchTimerRef.current);
+      }
+
       stopScanner();
     };
   }, []);
@@ -120,13 +126,6 @@ export default function CheckOut() {
   // =========================================================
   // LOAD INITIAL PRODUCTS
   // =========================================================
-  //
-  // This intentionally loads the normal /getProducts endpoint.
-  // If the backend returns 10 products by default, those 10 are
-  // shown initially.
-  //
-  // Searching is handled separately below.
-  // =========================================================
 
   const loadProducts = async () => {
     setProductsLoading(true);
@@ -134,7 +133,10 @@ export default function CheckOut() {
     try {
       const response = await getProducts();
 
-      console.log('GET PRODUCTS RESPONSE:', response);
+      console.log(
+        'GET PRODUCTS RESPONSE:',
+        response
+      );
 
       if (
         response?.successful &&
@@ -147,7 +149,7 @@ export default function CheckOut() {
 
         setError(
           response?.message ||
-          'Unable to load products.'
+            'Unable to load products.'
         );
       }
     } catch (err) {
@@ -160,7 +162,7 @@ export default function CheckOut() {
 
       setError(
         err?.message ||
-        'Failed to load products.'
+          'Failed to load products.'
       );
     } finally {
       setProductsLoading(false);
@@ -170,38 +172,86 @@ export default function CheckOut() {
   // =========================================================
   // SEARCH PRODUCTS FROM API
   // =========================================================
-  //
-  // IMPORTANT:
-  // Do NOT filter the currently loaded 10 products.
-  //
-  // The backend must receive:
-  //
-  // GET /api/getProducts?q=milk
-  //
-  // This allows the backend to search the complete product
-  // database.
-  // =========================================================
 
   const searchProductsFromApi = async (searchValue) => {
-    const search = searchValue.trim();
+    const search = String(
+      searchValue || ''
+    ).trim();
 
     // -------------------------------------------------------
-    // Empty search
-    // -------------------------------------------------------
-    //
-    // When search is cleared, return to the initial product
-    // list.
+    // EMPTY SEARCH
     // -------------------------------------------------------
 
     if (!search) {
-      searchRequestRef.current += 1;
+      const requestId =
+        ++searchRequestRef.current;
 
+      setProductsLoading(true);
       setError('');
 
-      await loadProducts();
+      try {
+        const response =
+          await getProducts();
+
+        // Ignore old response
+        if (
+          requestId !==
+          searchRequestRef.current
+        ) {
+          return;
+        }
+
+        if (
+          response?.successful &&
+          Array.isArray(response.data)
+        ) {
+          setProducts(
+            response.data
+          );
+        } else {
+          setProducts([]);
+
+          setError(
+            response?.message ||
+              'Unable to load products.'
+          );
+        }
+      } catch (err) {
+        if (
+          requestId !==
+          searchRequestRef.current
+        ) {
+          return;
+        }
+
+        console.error(
+          'Load products error:',
+          err
+        );
+
+        setProducts([]);
+
+        setError(
+          err?.message ||
+            'Failed to load products.'
+        );
+      } finally {
+        if (
+          requestId ===
+          searchRequestRef.current
+        ) {
+          setProductsLoading(
+            false
+          );
+        }
+      }
 
       return;
     }
+
+    // -------------------------------------------------------
+    // NEW SEARCH REQUEST
+    // -------------------------------------------------------
 
     const requestId =
       ++searchRequestRef.current;
@@ -225,7 +275,7 @@ export default function CheckOut() {
       );
 
       // -----------------------------------------------------
-      // Ignore old request
+      // IGNORE OLD RESPONSE
       // -----------------------------------------------------
 
       if (
@@ -235,22 +285,28 @@ export default function CheckOut() {
         return;
       }
 
+      // -----------------------------------------------------
+      // SUCCESS
+      // -----------------------------------------------------
+
       if (
         response?.successful &&
         Array.isArray(response.data)
       ) {
-        setProducts(response.data);
+        setProducts(
+          response.data
+        );
       } else {
         setProducts([]);
 
         setError(
           response?.message ||
-          'Unable to search products.'
+            'Unable to search products.'
         );
       }
     } catch (err) {
       // -----------------------------------------------------
-      // Ignore old request
+      // IGNORE OLD RESPONSE
       // -----------------------------------------------------
 
       if (
@@ -269,7 +325,7 @@ export default function CheckOut() {
 
       setError(
         err?.message ||
-        'Failed to search products.'
+          'Failed to search products.'
       );
     } finally {
       if (
@@ -282,54 +338,82 @@ export default function CheckOut() {
   };
 
   // =========================================================
-  // SEARCH ON TYPING
+  // SEARCH INPUT CHANGE
   // =========================================================
   //
-  // Wait 300ms after the user stops typing before making
-  // the API call.
+  // IMPORTANT:
   //
-  // Example:
+  // setProductSearch() happens immediately.
   //
-  // User types:
+  // The API call happens separately after 400ms.
   //
-  // m
-  // mi
-  // mil
-  // milk
-  //
-  // Only:
-  //
-  // /api/getProducts?q=milk
-  //
-  // will normally be sent.
+  // This prevents the API from blocking normal typing.
   // =========================================================
 
-  useEffect(() => {
-    const search = productSearch.trim();
+  const handleProductSearchChange = (
+    event
+  ) => {
+    const value =
+      event.target.value;
 
     // -------------------------------------------------------
-    // Don't search on initial empty value.
-    // Initial products are already loaded.
+    // UPDATE INPUT IMMEDIATELY
     // -------------------------------------------------------
 
-    if (!search) {
-      return undefined;
+    setProductSearch(value);
+
+    // -------------------------------------------------------
+    // CANCEL PREVIOUS SEARCH TIMER
+    // -------------------------------------------------------
+
+    if (
+      searchTimerRef.current
+    ) {
+      clearTimeout(
+        searchTimerRef.current
+      );
     }
 
-    const timer = setTimeout(() => {
-      searchProductsFromApi(search);
-    }, 300);
+    // Clear old errors while typing
+    setError('');
 
-    return () => {
-      clearTimeout(timer);
-    };
-  }, [productSearch]);
+    // -------------------------------------------------------
+    // EMPTY SEARCH
+    // -------------------------------------------------------
+
+    if (!value.trim()) {
+      // Invalidate any running search
+      searchRequestRef.current += 1;
+
+      searchTimerRef.current =
+        setTimeout(() => {
+          searchProductsFromApi(
+            ''
+          );
+        }, 150);
+
+      return;
+    }
+
+    // -------------------------------------------------------
+    // DEBOUNCED SEARCH
+    // -------------------------------------------------------
+
+    searchTimerRef.current =
+      setTimeout(() => {
+        searchProductsFromApi(
+          value
+        );
+      }, 400);
+  };
 
   // =========================================================
   // CREATE CART PRODUCT
   // =========================================================
 
-  const createCartProduct = (product) => {
+  const createCartProduct = (
+    product
+  ) => {
     const primaryBarcode =
       product.barcodes?.find(
         (item) =>
@@ -373,7 +457,10 @@ export default function CheckOut() {
 
       weight:
         product.details?.netWeight
-          ? `${product.details.netWeight}${product.details.weightUnit || ''}`
+          ? `${product.details.netWeight}${
+              product.details.weightUnit ||
+              ''
+            }`
           : '',
 
       unit:
@@ -382,31 +469,32 @@ export default function CheckOut() {
       unitId:
         product.unitId,
 
-      price:
-        Number(
-          product.details?.sellingPrice || 0
-        ),
+      price: Number(
+        product.details
+          ?.sellingPrice || 0
+      ),
 
-      costPrice:
-        Number(
-          product.details?.costPrice || 0
-        ),
+      costPrice: Number(
+        product.details
+          ?.costPrice || 0
+      ),
 
-      wholesalePrice:
-        Number(
-          product.details?.wholesalePrice || 0
-        ),
+      wholesalePrice: Number(
+        product.details
+          ?.wholesalePrice || 0
+      ),
 
-      minimumSellingPrice:
-        Number(
-          product.details?.minimumSellingPrice || 0
-        ),
+      minimumSellingPrice: Number(
+        product.details
+          ?.minimumSellingPrice || 0
+      ),
 
       barcode:
         primaryBarcode?.barcode || '',
 
       barcodeType:
-        primaryBarcode?.barcodeType || '',
+        primaryBarcode?.barcodeType ||
+        '',
 
       taxGroupId:
         product.taxGroupId,
@@ -431,13 +519,17 @@ export default function CheckOut() {
   // SELECT PRODUCT
   // =========================================================
 
-  const handleProductSelect = (product) => {
+  const handleProductSelect = (
+    product
+  ) => {
     setError('');
 
     const cartProduct =
       createCartProduct(product);
 
-    if (cartProduct.price <= 0) {
+    if (
+      cartProduct.price <= 0
+    ) {
       setError(
         `${cartProduct.name} does not have a valid selling price.`
       );
@@ -447,7 +539,23 @@ export default function CheckOut() {
 
     addToCart(cartProduct);
 
+    // Clear search
     setProductSearch('');
+
+    // Cancel pending search
+    if (
+      searchTimerRef.current
+    ) {
+      clearTimeout(
+        searchTimerRef.current
+      );
+    }
+
+    // Invalidate previous API requests
+    searchRequestRef.current += 1;
+
+    // Load normal products again
+    searchProductsFromApi('');
 
     setTimeout(() => {
       productSearchRef.current?.focus();
@@ -458,7 +566,9 @@ export default function CheckOut() {
   // BARCODE SCANNER SEARCH
   // =========================================================
 
-  const scanProduct = async (code) => {
+  const scanProduct = async (
+    code
+  ) => {
     const cleanCode =
       String(code).trim();
 
@@ -472,7 +582,9 @@ export default function CheckOut() {
 
     try {
       const response =
-        await searchProducts(cleanCode);
+        await searchProducts(
+          cleanCode
+        );
 
       console.log(
         'PRODUCT SEARCH RESPONSE:',
@@ -481,7 +593,9 @@ export default function CheckOut() {
 
       if (
         !response?.successful ||
-        !Array.isArray(response.data) ||
+        !Array.isArray(
+          response.data
+        ) ||
         response.data.length === 0
       ) {
         setError(
@@ -495,9 +609,13 @@ export default function CheckOut() {
         response.data[0];
 
       const cartProduct =
-        createCartProduct(product);
+        createCartProduct(
+          product
+        );
 
-      if (cartProduct.price <= 0) {
+      if (
+        cartProduct.price <= 0
+      ) {
         setError(
           `${cartProduct.name} does not have a valid selling price.`
         );
@@ -514,7 +632,7 @@ export default function CheckOut() {
 
       setError(
         lookupError?.message ||
-        'Failed to fetch product.'
+          'Failed to fetch product.'
       );
     } finally {
       setLoadingProduct(false);
@@ -529,94 +647,110 @@ export default function CheckOut() {
   // ADD TO CART
   // =========================================================
 
-  const addToCart = (product) => {
-    setCartItems((currentItems) => {
-      const existing =
-        currentItems.find(
-          (item) =>
-            String(item.id) ===
-            String(product.id)
-        );
-
-      if (existing) {
-        return currentItems.map(
-          (item) => {
-            if (
-              String(item.id) !==
+  const addToCart = (
+    product
+  ) => {
+    setCartItems(
+      (currentItems) => {
+        const existing =
+          currentItems.find(
+            (item) =>
+              String(item.id) ===
               String(product.id)
-            ) {
-              return item;
+          );
+
+        if (existing) {
+          return currentItems.map(
+            (item) => {
+              if (
+                String(item.id) !==
+                String(product.id)
+              ) {
+                return item;
+              }
+
+              return {
+                ...item,
+
+                qty:
+                  Number(item.qty) +
+                  1
+              };
             }
-
-            return {
-              ...item,
-
-              qty:
-                Number(item.qty) + 1
-            };
-          }
-        );
-      }
-
-      return [
-        ...currentItems,
-
-        {
-          ...product,
-          qty: 1
+          );
         }
-      ];
-    });
+
+        return [
+          ...currentItems,
+
+          {
+            ...product,
+            qty: 1
+          }
+        ];
+      }
+    );
   };
 
   // =========================================================
   // QUANTITY
   // =========================================================
 
-  const increaseQuantity = (id) => {
-    setCartItems((items) =>
-      items.map((item) =>
-        String(item.id) ===
-        String(id)
-          ? {
-              ...item,
-
-              qty:
-                Number(item.qty) + 1
-            }
-          : item
-      )
-    );
-  };
-
-  const decreaseQuantity = (id) => {
-    setCartItems((items) =>
-      items
-        .map((item) =>
+  const increaseQuantity = (
+    id
+  ) => {
+    setCartItems(
+      (items) =>
+        items.map((item) =>
           String(item.id) ===
           String(id)
             ? {
                 ...item,
 
                 qty:
-                  Number(item.qty) - 1
+                  Number(item.qty) +
+                  1
               }
             : item
-        )
-        .filter(
-          (item) =>
-            Number(item.qty) > 0
         )
     );
   };
 
-  const removeItem = (id) => {
-    setCartItems((items) =>
-      items.filter(
-        (item) =>
-          String(item.id) !==
-          String(id)
-      )
+  const decreaseQuantity = (
+    id
+  ) => {
+    setCartItems(
+      (items) =>
+        items
+          .map((item) =>
+            String(item.id) ===
+            String(id)
+              ? {
+                  ...item,
+
+                  qty:
+                    Number(item.qty) -
+                    1
+                }
+              : item
+          )
+          .filter(
+            (item) =>
+              Number(item.qty) > 0
+          )
+    );
+  };
+
+  const removeItem = (
+    id
+  ) => {
+    setCartItems(
+      (items) =>
+        items.filter(
+          (item) =>
+            String(item.id) !==
+            String(id)
+        )
     );
   };
 
@@ -637,6 +771,21 @@ export default function CheckOut() {
 
     setError('');
 
+    // Cancel pending search
+    if (
+      searchTimerRef.current
+    ) {
+      clearTimeout(
+        searchTimerRef.current
+      );
+    }
+
+    // Invalidate running search
+    searchRequestRef.current += 1;
+
+    // Reload normal products
+    searchProductsFromApi('');
+
     setTimeout(() => {
       productSearchRef.current?.focus();
     }, 200);
@@ -652,7 +801,6 @@ export default function CheckOut() {
         sum +
         Number(item.qty) *
           Number(item.price),
-
       0
     );
 
@@ -695,7 +843,7 @@ export default function CheckOut() {
   };
 
   // =========================================================
-  // START SCANNER
+  // START SCANNER EFFECT
   // =========================================================
 
   useEffect(() => {
@@ -731,6 +879,10 @@ export default function CheckOut() {
       cancelled = true;
     };
   }, [scannerOpen]);
+
+  // =========================================================
+  // START SCANNER
+  // =========================================================
 
   const startScanner = async () => {
     if (
@@ -782,19 +934,19 @@ export default function CheckOut() {
           ) {
             await scannerRef.current.stop();
           }
-        } catch (error) {
+        } catch (stopError) {
           console.log(
             'Previous scanner stop:',
-            error
+            stopError
           );
         }
 
         try {
           await scannerRef.current.clear();
-        } catch (error) {
+        } catch (clearError) {
           console.log(
             'Previous scanner clear:',
-            error
+            clearError
           );
         }
 
@@ -991,10 +1143,10 @@ export default function CheckOut() {
         ) {
           await scannerRef.current.stop();
         }
-      } catch (error) {
+      } catch (stopError) {
         console.log(
           'Failed scanner stop:',
-          error
+          stopError
         );
       }
 
@@ -1002,10 +1154,10 @@ export default function CheckOut() {
         if (scannerRef.current) {
           await scannerRef.current.clear();
         }
-      } catch (error) {
+      } catch (clearError) {
         console.log(
           'Failed scanner clear:',
-          error
+          clearError
         );
       }
 
@@ -1033,19 +1185,19 @@ export default function CheckOut() {
       if (scanner.isScanning) {
         await scanner.stop();
       }
-    } catch (error) {
+    } catch (stopError) {
       console.error(
         'Scanner stop error:',
-        error
+        stopError
       );
     }
 
     try {
       await scanner.clear();
-    } catch (error) {
+    } catch (clearError) {
       console.error(
         'Scanner clear error:',
-        error
+        clearError
       );
     }
 
@@ -1308,13 +1460,9 @@ export default function CheckOut() {
                 value={
                   productSearch
                 }
-                onChange={(
-                  event
-                ) => {
-                  setProductSearch(
-                    event.target.value
-                  );
-                }}
+                onChange={
+                  handleProductSearchChange
+                }
                 fullWidth
                 autoFocus
                 disabled={
@@ -1405,8 +1553,13 @@ export default function CheckOut() {
                             mt: 1
                           }}
                           onClick={() =>
-                            setProductSearch(
-                              ''
+                            handleProductSearchChange(
+                              {
+                                target: {
+                                  value:
+                                    ''
+                                }
+                              }
                             )
                           }
                         >
