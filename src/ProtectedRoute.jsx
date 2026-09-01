@@ -5,15 +5,15 @@ const ProtectedRoute = () => {
 
   const token = localStorage.getItem('accessToken');
 
-  if (!token) {
-    return (
-      <Navigate
-        to="/login"
-        replace
-        state={{ from: location }}
-      />
-    );
-  }
+  // if (!token) {
+  //   return (
+  //     <Navigate
+  //       to="/login"
+  //       replace
+  //       state={{ from: location }}
+  //     />
+  //   );
+  // }
 
   return <Outlet />;
 };
