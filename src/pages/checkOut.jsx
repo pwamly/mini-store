@@ -678,324 +678,242 @@ export default function CheckOut() {
   // START SCANNER
   // =========================================================
 
-  const startScanner =
-    async () => {
+const startScanner = async () => {
+  try {
+    setScannerLoading(true);
+    setScannerError("");
 
+    if (!window.isSecureContext) {
+      throw new Error(
+        "Camera access requires HTTPS or localhost."
+      );
+    }
+
+    if (
+      !navigator.mediaDevices ||
+      !navigator.mediaDevices.getUserMedia
+    ) {
+      throw new Error(
+        "Camera is not supported by this browser."
+      );
+    }
+
+    const reader = document.getElementById(
+      "barcode-reader"
+    );
+
+    if (!reader) {
+      throw new Error(
+        "Barcode scanner element was not found."
+      );
+    }
+
+    // -------------------------------------------------------
+    // CLEAN PREVIOUS SCANNER
+    // -------------------------------------------------------
+
+    if (scannerRef.current) {
       try {
-
-        setScannerLoading(
-          true
-        );
-
-        setScannerError("");
-
-        if (
-          !window.isSecureContext
-        ) {
-
-          throw new Error(
-            "Camera access requires HTTPS or localhost."
-          );
+        if (scannerRef.current.isScanning) {
+          await scannerRef.current.stop();
         }
 
-        if (
-          !navigator.mediaDevices ||
-          !navigator.mediaDevices
-            .getUserMedia
-        ) {
-
-          throw new Error(
-            "Camera is not supported by this browser."
-          );
-        }
-
-        const reader =
-          document.getElementById(
-            "barcode-reader"
-          );
-
-        if (!reader) {
-
-          throw new Error(
-            "Barcode scanner element was not found."
-          );
-        }
-
-        // ===================================================
-        // CLEAN PREVIOUS
-        // ===================================================
-
-        if (
-          scannerRef.current
-        ) {
-
-          try {
-
-            if (
-              scannerRef.current
-                .isScanning
-            ) {
-
-              await scannerRef
-                .current
-                .stop();
-            }
-
-            await scannerRef
-              .current
-              .clear();
-
-          } catch (
-            cleanupError
-          ) {
-
-            console.log(
-              "Scanner cleanup:",
-              cleanupError
-            );
-          }
-
-          scannerRef.current =
-            null;
-        }
-
-        // ===================================================
-        // CREATE SCANNER
-        // ===================================================
-
-        const scanner =
-          new Html5Qrcode(
-            "barcode-reader"
-          );
-
-        scannerRef.current =
-          scanner;
-
-        const formats = [
-
-          Html5QrcodeSupportedFormats
-            .EAN_13,
-
-          Html5QrcodeSupportedFormats
-            .EAN_8,
-
-          Html5QrcodeSupportedFormats
-            .UPC_A,
-
-          Html5QrcodeSupportedFormats
-            .UPC_E,
-
-          Html5QrcodeSupportedFormats
-            .CODE_128,
-
-          Html5QrcodeSupportedFormats
-            .CODE_39,
-
-          Html5QrcodeSupportedFormats
-            .CODE_93,
-
-          Html5QrcodeSupportedFormats
-            .ITF
-        ];
-
-        const config = {
-
-          fps: 10,
-
-          qrbox: (
-            width,
-            height
-          ) => {
-
-            const scanWidth =
-              Math.min(
-                width * 0.9,
-                360
-              );
-
-            const scanHeight =
-              Math.min(
-                height * 0.4,
-                180
-              );
-
-            return {
-              width:
-                scanWidth,
-
-              height:
-                scanHeight
-            };
-          },
-
-          aspectRatio:
-            1.777778,
-
-          disableFlip: false,
-
-          formatsToSupport:
-            formats,
-
-          experimentalFeatures: {
-            useBarCodeDetectorIfSupported:
-              false
-          }
-        };
-
-        // ===================================================
-        // SUCCESS
-        // ===================================================
-
-        const onScanSuccess =
-          async (
-            decodedText,
-            decodedResult
-          ) => {
-
-            if (
-              scanProcessingRef.current
-            ) {
-              return;
-            }
-
-            scanProcessingRef.current =
-              true;
-
-            console.log(
-              "BARCODE DETECTED:",
-              decodedText
-            );
-
-            console.log(
-              "FORMAT:",
-              decodedResult
-                ?.result
-                ?.format
-                ?.formatName
-            );
-
-            try {
-
-              await stopScanner();
-
-              setScannerOpen(
-                false
-              );
-
-              setBarcode(
-                decodedText
-              );
-
-              await scanProduct(
-                decodedText
-              );
-
-            } catch (
-              scanError
-            ) {
-
-              console.error(
-                "Barcode scan error:",
-                scanError
-              );
-
-            } finally {
-
-              scanProcessingRef.current =
-                false;
-            }
-          };
-
-        // ===================================================
-        // FAILURE
-        // ===================================================
-
-        const onScanFailure =
-          () => {
-            // Continue scanning.
-          };
-
-        // ===================================================
-        // START
-        // ===================================================
-
-        await scanner.start(
-          {
-            facingMode:
-              "environment"
-          },
-
-          config,
-
-          onScanSuccess,
-
-          onScanFailure
-        );
-
-        setScannerLoading(
-          false
-        );
-
-      } catch (
-        cameraError
-      ) {
-
-        console.error(
-          "Camera error:",
-          cameraError
-        );
-
-        setScannerLoading(
-          false
-        );
-
-        let message =
-          "Unable to start camera.";
-
-        if (
-          !window.isSecureContext
-        ) {
-
-          message =
-            "Camera access requires HTTPS or localhost.";
-
-        } else if (
-          cameraError?.name ===
-          "NotAllowedError"
-        ) {
-
-          message =
-            "Camera permission was denied. Please allow camera access.";
-
-        } else if (
-          cameraError?.name ===
-          "NotFoundError"
-        ) {
-
-          message =
-            "No camera was found.";
-
-        } else if (
-          cameraError?.name ===
-          "NotReadableError"
-        ) {
-
-          message =
-            "Camera is already being used by another application.";
-
-        } else if (
-          cameraError?.message
-        ) {
-
-          message =
-            cameraError.message;
-        }
-
-        setScannerError(
-          message
+        await scannerRef.current.clear();
+      } catch (cleanupError) {
+        console.log(
+          "Scanner cleanup:",
+          cleanupError
         );
       }
+
+      scannerRef.current = null;
+    }
+
+    // -------------------------------------------------------
+    // CREATE SCANNER
+    // -------------------------------------------------------
+
+    const scanner = new Html5Qrcode(
+      "barcode-reader"
+    );
+
+    scannerRef.current = scanner;
+
+    // -------------------------------------------------------
+    // BARCODE FORMATS
+    // -------------------------------------------------------
+
+    const formats = [
+      Html5QrcodeSupportedFormats.EAN_13,
+      Html5QrcodeSupportedFormats.EAN_8,
+      Html5QrcodeSupportedFormats.UPC_A,
+      Html5QrcodeSupportedFormats.UPC_E,
+      Html5QrcodeSupportedFormats.CODE_128,
+      Html5QrcodeSupportedFormats.CODE_39,
+      Html5QrcodeSupportedFormats.CODE_93,
+      Html5QrcodeSupportedFormats.ITF
+    ];
+
+    // -------------------------------------------------------
+    // SCANNER CONFIG
+    // -------------------------------------------------------
+    // Keep this simple for better iPhone Safari support.
+    // Do NOT force aspectRatio.
+
+    const config = {
+      fps: 10,
+
+      qrbox: {
+        width: 300,
+        height: 150
+      },
+
+      disableFlip: false,
+
+      formatsToSupport: formats
     };
+
+    // -------------------------------------------------------
+    // SUCCESS
+    // -------------------------------------------------------
+
+    const onScanSuccess = async (
+      decodedText,
+      decodedResult
+    ) => {
+      if (scanProcessingRef.current) {
+        return;
+      }
+
+      scanProcessingRef.current = true;
+
+      console.log(
+        "BARCODE DETECTED:",
+        decodedText
+      );
+
+      console.log(
+        "FORMAT:",
+        decodedResult
+          ?.result
+          ?.format
+          ?.formatName
+      );
+
+      try {
+        // Save barcode first
+        setBarcode(decodedText);
+
+        // Stop camera
+        await stopScanner();
+
+        // Close scanner
+        setScannerOpen(false);
+
+        // Find product
+        await scanProduct(decodedText);
+
+      } catch (scanError) {
+        console.error(
+          "Barcode scan error:",
+          scanError
+        );
+
+        setScannerError(
+          scanError?.message ||
+          "Failed to process barcode."
+        );
+      } finally {
+        scanProcessingRef.current = false;
+      }
+    };
+
+    // -------------------------------------------------------
+    // FAILURE
+    // -------------------------------------------------------
+
+    const onScanFailure = () => {
+      // Ignore normal failed frames.
+    };
+
+    // -------------------------------------------------------
+    // START CAMERA
+    // -------------------------------------------------------
+
+    await scanner.start(
+      {
+        facingMode: {
+          ideal: "environment"
+        }
+      },
+      config,
+      onScanSuccess,
+      onScanFailure
+    );
+
+    // -------------------------------------------------------
+    // DEBUG CAMERA
+    // -------------------------------------------------------
+
+    const video = document.querySelector(
+      "#barcode-reader video"
+    );
+
+    if (video) {
+      console.log(
+        "Camera video:",
+        video.videoWidth,
+        "x",
+        video.videoHeight
+      );
+    }
+
+    setScannerLoading(false);
+
+  } catch (cameraError) {
+    console.error(
+      "Camera error:",
+      cameraError
+    );
+
+    setScannerLoading(false);
+
+    let message =
+      "Unable to start camera.";
+
+    if (!window.isSecureContext) {
+      message =
+        "Camera access requires HTTPS or localhost.";
+
+    } else if (
+      cameraError?.name ===
+      "NotAllowedError"
+    ) {
+      message =
+        "Camera permission was denied. Please allow camera access.";
+
+    } else if (
+      cameraError?.name ===
+      "NotFoundError"
+    ) {
+      message =
+        "No camera was found.";
+
+    } else if (
+      cameraError?.name ===
+      "NotReadableError"
+    ) {
+      message =
+        "Camera is already being used by another application.";
+
+    } else if (cameraError?.message) {
+      message = cameraError.message;
+    }
+
+    setScannerError(message);
+  }
+};
+
 
   // =========================================================
   // STOP SCANNER
@@ -1267,171 +1185,52 @@ export default function CheckOut() {
           xs={12}
         >
 
-          <Box
-            sx={{
-              p: {
-                xs: 2,
-                sm: 3
-              },
+        <Box
+          sx={{
+            width: "100%",
+            minHeight: {
+              xs: 300,
+              sm: 350
+            },
+            backgroundColor: "#000",
+            borderRadius: 2,
+            overflow: "hidden",
+            position: "relative",
 
-              border:
-                "1px solid",
+            "& video": {
+              width: "100% !important",
+              objectFit: "cover"
+            },
 
-              borderColor:
-                "divider",
-
-              borderRadius: 2
+            "& #qr-shaded-region": {
+              border: "3px solid #fff !important"
+            }
+          }}
+        >
+          <div
+            id="barcode-reader"
+            style={{
+              width: "100%"
             }}
-          >
+          />
 
-            <Typography
-              variant="h6"
-              gutterBottom
+          {scannerLoading && (
+            <Box
+              sx={{
+                position: "absolute",
+                bottom: 20,
+                left: 0,
+                right: 0,
+                textAlign: "center"
+              }}
             >
-              Add Product
-            </Typography>
-
-            {error && (
-
-              <Alert
-                severity="error"
-                sx={{
-                  mb: 2
-                }}
-                onClose={() =>
-                  setError("")
-                }
-              >
-                {error}
-              </Alert>
-            )}
-
-            <Stack
-              spacing={2}
-            >
-
-              {/* =================================================
-                  SEARCH
-              ================================================= */}
-
-              <TextField
-
-                inputRef={
-                  barcodeInputRef
-                }
-
-                label="Barcode, SKU or Product Name"
-
-                placeholder="Scan barcode or enter SKU / product name"
-
-                value={barcode}
-
-                onChange={
-                  handleBarcodeChange
-                }
-
-                onKeyDown={
-                  handleBarcodeKeyDown
-                }
-
-                fullWidth
-
-                autoFocus
-
-                disabled={
-                  loadingProduct
-                }
-
-                slotProps={{
-                  htmlInput: {
-
-                    inputMode:
-                      "text",
-
-                    enterKeyHint:
-                      "done",
-
-                    autoCapitalize:
-                      "none",
-
-                    autoCorrect:
-                      "off",
-
-                    spellCheck:
-                      false
-                  }
-                }}
-              />
-
-              {/* =================================================
-                  BUTTONS
-              ================================================= */}
-
-              <Stack
-                direction={{
-                  xs: "column",
-                  sm: "row"
-                }}
-                spacing={2}
-                sx={{
-                  width:
-                    "100%"
-                }}
-              >
-
-                <Button
-                  variant="contained"
-                  size="large"
-                  onClick={
-                    handleAddProduct
-                  }
-                  disabled={
-                    loadingProduct ||
-                    !barcode.trim()
-                  }
-                  fullWidth
-                  sx={{
-                    minHeight: 52
-                  }}
-                >
-                  {loadingProduct
-                    ? "Searching..."
-                    : "Add Product"}
-                </Button>
-
-                <Button
-                  variant="outlined"
-                  size="large"
-                  onClick={
-                    handleOpenScanner
-                  }
-                  disabled={
-                    loadingProduct
-                  }
-                  fullWidth
-                  sx={{
-                    minHeight: 52
-                  }}
-                >
-                  Scan Barcode
-                </Button>
-
-              </Stack>
-
-              <Typography
-                variant="caption"
-                color="text.secondary"
-              >
-                Search using a barcode,
-                SKU or product name.
-                You can also scan a
-                barcode with the camera.
+              <Typography color="white">
+                Starting camera...
               </Typography>
-
-            </Stack>
-
-          </Box>
-
+            </Box>
+          )}
+        </Box>
+        
         </Grid>
 
         {/* ===================================================
