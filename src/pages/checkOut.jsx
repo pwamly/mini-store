@@ -42,55 +42,35 @@ export default function CheckOut() {
   // STATE
   // =========================================================
 
-  const [
-    cartItems,
-    setCartItems
-  ] = useState([]);
+  const [cartItems, setCartItems] =
+    useState([]);
 
-  const [
-    barcode,
-    setBarcode
-  ] = useState("");
+  const [barcode, setBarcode] =
+    useState("");
 
-  const [
-    customerName,
-    setCustomerName
-  ] = useState("");
+  const [customerName, setCustomerName] =
+    useState("");
 
-  const [
-    paymentMethod,
-    setPaymentMethod
-  ] = useState("cash");
+  const [paymentMethod, setPaymentMethod] =
+    useState("cash");
 
-  const [
-    cashGiven,
-    setCashGiven
-  ] = useState("");
+  const [cashGiven, setCashGiven] =
+    useState("");
 
-  const [
-    scannerOpen,
-    setScannerOpen
-  ] = useState(false);
+  const [scannerOpen, setScannerOpen] =
+    useState(false);
 
-  const [
-    scannerLoading,
-    setScannerLoading
-  ] = useState(false);
+  const [scannerLoading, setScannerLoading] =
+    useState(false);
 
-  const [
-    loadingProduct,
-    setLoadingProduct
-  ] = useState(false);
+  const [loadingProduct, setLoadingProduct] =
+    useState(false);
 
-  const [
-    error,
-    setError
-  ] = useState("");
+  const [error, setError] =
+    useState("");
 
-  const [
-    scannerError,
-    setScannerError
-  ] = useState("");
+  const [scannerError, setScannerError] =
+    useState("");
 
   const barcodeInputRef =
     useRef(null);
@@ -101,13 +81,14 @@ export default function CheckOut() {
   const scanProcessingRef =
     useRef(false);
 
+  const scannerStartingRef =
+    useRef(false);
+
   // =========================================================
-  // TZS FORMAT
+  // TZS
   // =========================================================
 
-  const formatTZS = (
-    amount
-  ) => {
+  const formatTZS = (amount) => {
 
     return new Intl.NumberFormat(
       "en-TZ",
@@ -123,18 +104,19 @@ export default function CheckOut() {
   };
 
   // =========================================================
-  // AUTO FOCUS / CLEANUP
+  // AUTO FOCUS
   // =========================================================
 
   useEffect(() => {
 
-    const timer = setTimeout(() => {
+    const timer =
+      setTimeout(() => {
 
-      barcodeInputRef
-        .current
-        ?.focus();
+        barcodeInputRef
+          .current
+          ?.focus();
 
-    }, 300);
+      }, 300);
 
     return () => {
 
@@ -147,7 +129,55 @@ export default function CheckOut() {
   }, []);
 
   // =========================================================
-  // INPUT CHANGE
+  // START SCANNER WHEN DIALOG IS OPEN
+  // =========================================================
+
+  useEffect(() => {
+
+    if (!scannerOpen) {
+      return;
+    }
+
+    let cancelled = false;
+
+    const start = async () => {
+
+      /*
+       * Wait until React/MUI has actually
+       * rendered #barcode-reader.
+       *
+       * This is important on iPhone Safari.
+       */
+
+      await new Promise((resolve) => {
+
+        requestAnimationFrame(() => {
+
+          requestAnimationFrame(resolve);
+
+        });
+
+      });
+
+      if (cancelled) {
+        return;
+      }
+
+      await startScanner();
+    };
+
+    start();
+
+    return () => {
+
+      cancelled = true;
+
+    };
+
+  }, [scannerOpen]);
+
+  // =========================================================
+  // BARCODE INPUT
   // =========================================================
 
   const handleBarcodeChange = (
@@ -164,7 +194,7 @@ export default function CheckOut() {
   };
 
   // =========================================================
-  // ADD PRODUCT BUTTON
+  // ADD PRODUCT
   // =========================================================
 
   const handleAddProduct =
@@ -186,31 +216,24 @@ export default function CheckOut() {
         return;
       }
 
-      await scanProduct(
-        code
-      );
+      await scanProduct(code);
     };
 
   // =========================================================
-  // ENTER KEY
+  // ENTER
   // =========================================================
 
   const handleBarcodeKeyDown =
-    async (
-      event
-    ) => {
+    async (event) => {
 
       if (
-        event.key ===
-        "Enter"
+        event.key === "Enter"
       ) {
 
         event.preventDefault();
 
         await handleAddProduct();
-
       }
-
     };
 
   // =========================================================
@@ -218,9 +241,7 @@ export default function CheckOut() {
   // =========================================================
 
   const scanProduct =
-    async (
-      code
-    ) => {
+    async (code) => {
 
       const cleanCode =
         String(code).trim();
@@ -245,10 +266,6 @@ export default function CheckOut() {
           response
         );
 
-        // -----------------------------------------------------
-        // CHECK RESPONSE
-        // -----------------------------------------------------
-
         if (
           !response?.successful ||
           !Array.isArray(
@@ -266,16 +283,8 @@ export default function CheckOut() {
           return;
         }
 
-        // -----------------------------------------------------
-        // PRODUCT
-        // -----------------------------------------------------
-
         const product =
           response.data[0];
-
-        // -----------------------------------------------------
-        // PRIMARY BARCODE
-        // -----------------------------------------------------
 
         const primaryBarcode =
           product.barcodes?.find(
@@ -283,10 +292,6 @@ export default function CheckOut() {
               item.isPrimary === true
           ) ||
           product.barcodes?.[0];
-
-        // -----------------------------------------------------
-        // CART PRODUCT
-        // -----------------------------------------------------
 
         const cartProduct = {
 
@@ -321,8 +326,7 @@ export default function CheckOut() {
             product.brandId,
 
           variant:
-            product.details
-              ?.flavor ||
+            product.details?.flavor ||
             "",
 
           category:
@@ -395,10 +399,6 @@ export default function CheckOut() {
           qty: 1
         };
 
-        // -----------------------------------------------------
-        // CHECK PRICE
-        // -----------------------------------------------------
-
         if (
           cartProduct.price <= 0
         ) {
@@ -410,19 +410,13 @@ export default function CheckOut() {
           return;
         }
 
-        // -----------------------------------------------------
-        // ADD TO CART
-        // -----------------------------------------------------
-
         addToCart(
           cartProduct
         );
 
         setBarcode("");
 
-      } catch (
-        lookupError
-      ) {
+      } catch (lookupError) {
 
         console.error(
           "Product lookup error:",
@@ -445,9 +439,7 @@ export default function CheckOut() {
             ?.focus();
 
         }, 100);
-
       }
-
     };
 
   // =========================================================
@@ -479,7 +471,6 @@ export default function CheckOut() {
               ) {
 
                 return item;
-
               }
 
               return {
@@ -488,29 +479,23 @@ export default function CheckOut() {
                 qty:
                   Number(item.qty) + 1
               };
-
             }
           );
-
         }
 
         return [
           ...currentItems,
-
           {
             ...product,
             qty: 1
           }
-
         ];
-
       }
     );
-
   };
 
   // =========================================================
-  // INCREASE QUANTITY
+  // QUANTITY
   // =========================================================
 
   const increaseQuantity = (
@@ -525,20 +510,13 @@ export default function CheckOut() {
             String(id)
               ? {
                   ...item,
-
                   qty:
                     Number(item.qty) + 1
                 }
-
               : item
         )
     );
-
   };
-
-  // =========================================================
-  // DECREASE QUANTITY
-  // =========================================================
 
   const decreaseQuantity = (
     id
@@ -553,25 +531,17 @@ export default function CheckOut() {
               String(id)
                 ? {
                     ...item,
-
                     qty:
                       Number(item.qty) - 1
                   }
-
                 : item
           )
-
           .filter(
             (item) =>
               Number(item.qty) > 0
           )
     );
-
   };
-
-  // =========================================================
-  // REMOVE ITEM
-  // =========================================================
 
   const removeItem = (
     id
@@ -585,7 +555,6 @@ export default function CheckOut() {
             String(id)
         )
     );
-
   };
 
   // =========================================================
@@ -600,9 +569,7 @@ export default function CheckOut() {
 
     setCustomerName("");
 
-    setPaymentMethod(
-      "cash"
-    );
+    setPaymentMethod("cash");
 
     setCashGiven("");
 
@@ -615,7 +582,6 @@ export default function CheckOut() {
         ?.focus();
 
     }, 200);
-
   };
 
   // =========================================================
@@ -630,14 +596,10 @@ export default function CheckOut() {
       ) =>
         sum +
         Number(item.qty) *
-        Number(item.price),
+          Number(item.price),
 
       0
     );
-
-  // =========================================================
-  // TAX
-  // =========================================================
 
   const tax = 0;
 
@@ -671,19 +633,26 @@ export default function CheckOut() {
   const handleOpenScanner =
     () => {
 
-      setScannerError("");
+      /*
+       * IMPORTANT:
+       *
+       * Do not call startScanner()
+       * here.
+       *
+       * The Dialog has not mounted
+       * yet.
+       *
+       * scannerOpen causes the Dialog
+       * to render, then the useEffect
+       * above starts the camera.
+       */
 
-      setScannerOpen(true);
+      setScannerError("");
 
       scanProcessingRef.current =
         false;
 
-      setTimeout(() => {
-
-        startScanner();
-
-      }, 500);
-
+      setScannerOpen(true);
     };
 
   // =========================================================
@@ -693,6 +662,16 @@ export default function CheckOut() {
   const startScanner =
     async () => {
 
+      if (
+        scannerStartingRef.current
+      ) {
+
+        return;
+      }
+
+      scannerStartingRef.current =
+        true;
+
       try {
 
         setScannerLoading(true);
@@ -700,7 +679,7 @@ export default function CheckOut() {
         setScannerError("");
 
         // -----------------------------------------------------
-        // SECURE CONTEXT
+        // HTTPS
         // -----------------------------------------------------
 
         if (
@@ -708,13 +687,12 @@ export default function CheckOut() {
         ) {
 
           throw new Error(
-            "Camera access requires HTTPS or localhost."
+            "Camera requires HTTPS. Open this POS using HTTPS, not HTTP."
           );
-
         }
 
         // -----------------------------------------------------
-        // MEDIA DEVICES
+        // CAMERA API
         // -----------------------------------------------------
 
         if (
@@ -723,13 +701,12 @@ export default function CheckOut() {
         ) {
 
           throw new Error(
-            "Camera is not supported by this browser."
+            "This browser does not support camera access."
           );
-
         }
 
         // -----------------------------------------------------
-        // READER
+        // FIND READER
         // -----------------------------------------------------
 
         const reader =
@@ -742,11 +719,10 @@ export default function CheckOut() {
           throw new Error(
             "Barcode scanner element was not found."
           );
-
         }
 
         // -----------------------------------------------------
-        // CLEAN PREVIOUS
+        // CLEAN OLD SCANNER
         // -----------------------------------------------------
 
         if (
@@ -760,30 +736,37 @@ export default function CheckOut() {
                 .isScanning
             ) {
 
-              await scannerRef.current.stop();
-
+              await scannerRef.current
+                .stop();
             }
 
-            await scannerRef.current.clear();
-
-          } catch (
-            cleanupError
-          ) {
+          } catch (error) {
 
             console.log(
-              "Scanner cleanup:",
-              cleanupError
+              "Previous scanner stop:",
+              error
             );
+          }
 
+          try {
+
+            await scannerRef.current
+              .clear();
+
+          } catch (error) {
+
+            console.log(
+              "Previous scanner clear:",
+              error
+            );
           }
 
           scannerRef.current =
             null;
-
         }
 
         // -----------------------------------------------------
-        // CREATE SCANNER
+        // CREATE
         // -----------------------------------------------------
 
         const scanner =
@@ -795,7 +778,7 @@ export default function CheckOut() {
           scanner;
 
         // -----------------------------------------------------
-        // BARCODE FORMATS
+        // FORMATS
         // -----------------------------------------------------
 
         const formats = [
@@ -834,9 +817,18 @@ export default function CheckOut() {
 
           fps: 10,
 
+          /*
+           * Keep this fixed.
+           *
+           * Do not use aspectRatio.
+           * Do not use a function qrbox.
+           *
+           * This is more reliable on iPhone Safari.
+           */
+
           qrbox: {
-            width: 300,
-            height: 150
+            width: 280,
+            height: 140
           },
 
           disableFlip: false,
@@ -861,7 +853,6 @@ export default function CheckOut() {
             ) {
 
               return;
-
             }
 
             scanProcessingRef.current =
@@ -901,7 +892,7 @@ export default function CheckOut() {
             ) {
 
               console.error(
-                "Barcode scan error:",
+                "Barcode processing error:",
                 scanError
               );
 
@@ -914,9 +905,7 @@ export default function CheckOut() {
 
               scanProcessingRef.current =
                 false;
-
             }
-
           };
 
         // -----------------------------------------------------
@@ -925,18 +914,30 @@ export default function CheckOut() {
 
         const onScanFailure =
           () => {
-            // Normal failed frames are ignored.
+            // Normal.
+            // Most video frames do not contain a barcode.
           };
 
         // -----------------------------------------------------
         // START CAMERA
         // -----------------------------------------------------
 
+        /*
+         * IMPORTANT FOR IPHONE:
+         *
+         * Use a simple string:
+         *
+         * facingMode: "environment"
+         *
+         * instead of:
+         *
+         * { ideal: "environment" }
+         */
+
         await scanner.start(
           {
-            facingMode: {
-              ideal: "environment"
-            }
+            facingMode:
+              "environment"
           },
 
           config,
@@ -947,7 +948,7 @@ export default function CheckOut() {
         );
 
         // -----------------------------------------------------
-        // DEBUG
+        // VIDEO
         // -----------------------------------------------------
 
         const video =
@@ -957,49 +958,47 @@ export default function CheckOut() {
 
         if (video) {
 
+          video.setAttribute(
+            "playsinline",
+            "true"
+          );
+
+          video.setAttribute(
+            "webkit-playsinline",
+            "true"
+          );
+
+          video.muted = true;
+
           console.log(
-            "Camera video:",
+            "iPhone camera video:",
             video.videoWidth,
             "x",
             video.videoHeight
           );
-
         }
 
-        setScannerLoading(
-          false
-        );
+        setScannerLoading(false);
 
-      } catch (
-        cameraError
-      ) {
+      } catch (cameraError) {
 
         console.error(
-          "Camera error:",
+          "FULL CAMERA ERROR:",
           cameraError
         );
 
-        setScannerLoading(
-          false
-        );
+        setScannerLoading(false);
 
         let message =
           "Unable to start camera.";
 
         if (
-          !window.isSecureContext
-        ) {
-
-          message =
-            "Camera access requires HTTPS or localhost.";
-
-        } else if (
           cameraError?.name ===
           "NotAllowedError"
         ) {
 
           message =
-            "Camera permission was denied. Please allow camera access.";
+            "Camera permission was denied. On iPhone, go to Settings → Safari → Camera and allow this website.";
 
         } else if (
           cameraError?.name ===
@@ -1007,7 +1006,7 @@ export default function CheckOut() {
         ) {
 
           message =
-            "No camera was found.";
+            "No camera was found on this device.";
 
         } else if (
           cameraError?.name ===
@@ -1015,7 +1014,7 @@ export default function CheckOut() {
         ) {
 
           message =
-            "Camera is already being used by another application.";
+            "The camera could not be opened. Close other apps using the camera and try again.";
 
         } else if (
           cameraError?.name ===
@@ -1023,7 +1022,15 @@ export default function CheckOut() {
         ) {
 
           message =
-            "The requested camera is not available.";
+            "The requested camera is not available. Trying the iPhone camera again may fix this.";
+
+        } else if (
+          cameraError?.name ===
+          "SecurityError"
+        ) {
+
+          message =
+            "Safari blocked camera access. Make sure this page is loaded using HTTPS.";
 
         } else if (
           cameraError?.message
@@ -1031,15 +1038,59 @@ export default function CheckOut() {
 
           message =
             cameraError.message;
-
         }
 
         setScannerError(
           message
         );
 
-      }
+        // Clean failed scanner
 
+        try {
+
+          if (
+            scannerRef.current
+              ?.isScanning
+          ) {
+
+            await scannerRef.current
+              .stop();
+          }
+
+        } catch (error) {
+
+          console.log(
+            "Failed scanner stop:",
+            error
+          );
+        }
+
+        try {
+
+          if (
+            scannerRef.current
+          ) {
+
+            await scannerRef.current
+              .clear();
+          }
+
+        } catch (error) {
+
+          console.log(
+            "Failed scanner clear:",
+            error
+          );
+        }
+
+        scannerRef.current =
+          null;
+
+      } finally {
+
+        scannerStartingRef.current =
+          false;
+      }
     };
 
   // =========================================================
@@ -1055,7 +1106,6 @@ export default function CheckOut() {
       if (!scanner) {
 
         return;
-
       }
 
       try {
@@ -1065,25 +1115,33 @@ export default function CheckOut() {
         ) {
 
           await scanner.stop();
-
         }
+
+      } catch (error) {
+
+        console.error(
+          "Scanner stop error:",
+          error
+        );
+      }
+
+      try {
 
         await scanner.clear();
 
-      } catch (
-        scannerError
-      ) {
+      } catch (error) {
 
         console.error(
-          "Stop scanner error:",
-          scannerError
+          "Scanner clear error:",
+          error
         );
-
       }
 
       scannerRef.current =
         null;
 
+      scannerStartingRef.current =
+        false;
     };
 
   // =========================================================
@@ -1095,13 +1153,9 @@ export default function CheckOut() {
 
       await stopScanner();
 
-      setScannerOpen(
-        false
-      );
+      setScannerOpen(false);
 
-      setScannerLoading(
-        false
-      );
+      setScannerLoading(false);
 
       setScannerError("");
 
@@ -1115,7 +1169,6 @@ export default function CheckOut() {
           ?.focus();
 
       }, 300);
-
     };
 
   // =========================================================
@@ -1136,7 +1189,6 @@ export default function CheckOut() {
         );
 
         return;
-
       }
 
       if (
@@ -1152,7 +1204,6 @@ export default function CheckOut() {
           );
 
           return;
-
         }
 
         if (
@@ -1166,14 +1217,8 @@ export default function CheckOut() {
           );
 
           return;
-
         }
-
       }
-
-      // -------------------------------------------------------
-      // SALE OBJECT
-      // -------------------------------------------------------
 
       const sale = {
 
@@ -1195,14 +1240,22 @@ export default function CheckOut() {
                 item.barcode,
 
               quantity:
-                Number(item.qty),
+                Number(
+                  item.qty
+                ),
 
               unitPrice:
-                Number(item.price),
+                Number(
+                  item.price
+                ),
 
               total:
-                Number(item.qty) *
-                Number(item.price)
+                Number(
+                  item.qty
+                ) *
+                Number(
+                  item.price
+                )
 
             })
           ),
@@ -1225,17 +1278,12 @@ export default function CheckOut() {
 
         createdAt:
           new Date().toISOString()
-
       };
 
       console.log(
         "SALE:",
         sale
       );
-
-      // -------------------------------------------------------
-      // TEMPORARY SALE COMPLETION
-      // -------------------------------------------------------
 
       let message = "";
 
@@ -1245,22 +1293,28 @@ export default function CheckOut() {
 
         message =
           `SALE COMPLETED\n\n` +
-          `Total: ${formatTZS(total)}\n` +
-          `Cash Given: ${formatTZS(cashAmount)}\n` +
-          `Change: ${formatTZS(change)}`;
+          `Total: ${formatTZS(
+            total
+          )}\n` +
+          `Cash Given: ${formatTZS(
+            cashAmount
+          )}\n` +
+          `Change: ${formatTZS(
+            change
+          )}`;
 
       } else {
 
         message =
           `SALE COMPLETED\n\n` +
-          `Total: ${formatTZS(total)}`;
-
+          `Total: ${formatTZS(
+            total
+          )}`;
       }
 
       alert(message);
 
       clearCart();
-
     };
 
   // =========================================================
@@ -1320,8 +1374,6 @@ export default function CheckOut() {
               Add Product
             </Typography>
 
-            {/* ERROR */}
-
             {error && (
 
               <Alert
@@ -1342,7 +1394,7 @@ export default function CheckOut() {
               spacing={2}
             >
 
-              {/* SEARCH INPUT */}
+              {/* SEARCH */}
 
               <TextField
 
@@ -1389,7 +1441,6 @@ export default function CheckOut() {
 
                     spellCheck:
                       false
-
                   }
                 }}
 
@@ -1403,16 +1454,12 @@ export default function CheckOut() {
                   sm: "row"
                 }}
                 spacing={2}
-                sx={{
-                  width: "100%"
-                }}
               >
-
-                {/* ADD PRODUCT */}
 
                 <Button
                   variant="contained"
                   size="large"
+                  fullWidth
                   onClick={
                     handleAddProduct
                   }
@@ -1420,7 +1467,6 @@ export default function CheckOut() {
                     loadingProduct ||
                     !barcode.trim()
                   }
-                  fullWidth
                   sx={{
                     minHeight: 52
                   }}
@@ -1430,18 +1476,16 @@ export default function CheckOut() {
                     : "Add Product"}
                 </Button>
 
-                {/* SCAN BARCODE */}
-
                 <Button
                   variant="outlined"
                   size="large"
+                  fullWidth
                   onClick={
                     handleOpenScanner
                   }
                   disabled={
                     loadingProduct
                   }
-                  fullWidth
                   sx={{
                     minHeight: 52
                   }}
@@ -1611,7 +1655,6 @@ export default function CheckOut() {
                           color="text.secondary"
                         >
                           {item.weight}
-
                           {item.unit
                             ? ` / ${item.unit}`
                             : ""}
@@ -1638,7 +1681,8 @@ export default function CheckOut() {
                           color="text.secondary"
                           display="block"
                         >
-                          Barcode: {item.barcode}
+                          Barcode:{" "}
+                          {item.barcode}
                         </Typography>
 
                       ) : (
@@ -1705,7 +1749,8 @@ export default function CheckOut() {
                         fontWeight="bold"
                         sx={{
                           minWidth: 24,
-                          textAlign: "center"
+                          textAlign:
+                            "center"
                         }}
                       >
                         {item.qty}
@@ -1735,7 +1780,8 @@ export default function CheckOut() {
                     <Box
                       sx={{
                         minWidth: 100,
-                        textAlign: "right"
+                        textAlign:
+                          "right"
                       }}
                     >
 
@@ -1806,13 +1852,8 @@ export default function CheckOut() {
                 xs: 2,
                 sm: 3
               },
-
-              border:
-                "1px solid",
-
-              borderColor:
-                "divider",
-
+              border: "1px solid",
+              borderColor: "divider",
               borderRadius: 2
             }}
           >
@@ -1828,16 +1869,10 @@ export default function CheckOut() {
               spacing={2}
             >
 
-              {/* CUSTOMER */}
-
               <TextField
                 label="Customer Name"
-                value={
-                  customerName
-                }
-                onChange={(
-                  event
-                ) =>
+                value={customerName}
+                onChange={(event) =>
                   setCustomerName(
                     event.target.value
                   )
@@ -1845,15 +1880,9 @@ export default function CheckOut() {
                 fullWidth
               />
 
-              {/* PAYMENT METHOD */}
-
               <Select
-                value={
-                  paymentMethod
-                }
-                onChange={(
-                  event
-                ) => {
+                value={paymentMethod}
+                onChange={(event) => {
 
                   const method =
                     event.target.value;
@@ -1890,8 +1919,6 @@ export default function CheckOut() {
 
               </Select>
 
-              {/* CASH */}
-
               {paymentMethod === "cash" && (
 
                 <>
@@ -1899,12 +1926,8 @@ export default function CheckOut() {
                   <TextField
                     label="Cash Given"
                     type="number"
-                    value={
-                      cashGiven
-                    }
-                    onChange={(
-                      event
-                    ) => {
+                    value={cashGiven}
+                    onChange={(event) => {
 
                       setCashGiven(
                         event.target.value
@@ -1920,13 +1943,12 @@ export default function CheckOut() {
                       step: 500
                     }}
                     placeholder="Enter cash received"
-                    error={
-                      insufficientCash
-                    }
+                    error={insufficientCash}
                     helperText={
                       insufficientCash
                         ? `Need ${formatTZS(
-                            total - cashAmount
+                            total -
+                            cashAmount
                           )} more`
                         : "Required before completing a cash sale"
                     }
@@ -1998,7 +2020,8 @@ export default function CheckOut() {
                         >
                           {formatTZS(
                             insufficientCash
-                              ? total - cashAmount
+                              ? total -
+                                cashAmount
                               : change
                           )}
                         </Typography>
@@ -2014,8 +2037,6 @@ export default function CheckOut() {
               )}
 
               <Divider />
-
-              {/* SUBTOTAL */}
 
               <Box
                 display="flex"
@@ -2034,8 +2055,6 @@ export default function CheckOut() {
                 </Typography>
 
               </Box>
-
-              {/* TAX */}
 
               <Box
                 display="flex"
@@ -2057,8 +2076,6 @@ export default function CheckOut() {
 
               <Divider />
 
-              {/* TOTAL */}
-
               <Box
                 display="flex"
                 justifyContent="space-between"
@@ -2075,9 +2092,6 @@ export default function CheckOut() {
                 <Typography
                   variant="h6"
                   color="primary"
-                  sx={{
-                    textAlign: "right"
-                  }}
                 >
                   {formatTZS(
                     total
@@ -2085,8 +2099,6 @@ export default function CheckOut() {
                 </Typography>
 
               </Box>
-
-              {/* COMPLETE */}
 
               <Button
                 variant="contained"
@@ -2111,8 +2123,6 @@ export default function CheckOut() {
               >
                 Complete Sale
               </Button>
-
-              {/* PRINT */}
 
               <Button
                 variant="outlined"
@@ -2166,8 +2176,6 @@ export default function CheckOut() {
           }}
         >
 
-          {/* SCANNER ERROR */}
-
           {scannerError && (
 
             <Alert
@@ -2181,24 +2189,21 @@ export default function CheckOut() {
 
           )}
 
-          {/* CAMERA */}
+          {/* =================================================
+              CAMERA
+          ================================================= */}
 
           <Box
             sx={{
               width: "100%",
-
-              minHeight: {
-                xs: 300,
-                sm: 350
+              height: {
+                xs: "55vh",
+                sm: 400
               },
-
-              backgroundColor:
-                "#000",
-
+              minHeight: 300,
+              backgroundColor: "#000",
               borderRadius: 2,
-
               overflow: "hidden",
-
               position: "relative",
 
               "& video": {
@@ -2206,10 +2211,18 @@ export default function CheckOut() {
                   "100% !important",
 
                 height:
-                  "auto !important",
+                  "100% !important",
 
                 objectFit:
-                  "cover"
+                  "cover",
+
+                display:
+                  "block"
+              },
+
+              "& canvas": {
+                display:
+                  "none"
               },
 
               "& #qr-shaded-region": {
@@ -2222,7 +2235,8 @@ export default function CheckOut() {
             <div
               id="barcode-reader"
               style={{
-                width: "100%"
+                width: "100%",
+                height: "100%"
               }}
             />
 
@@ -2233,19 +2247,30 @@ export default function CheckOut() {
                   position:
                     "absolute",
 
-                  bottom: 20,
-
+                  top: 0,
                   left: 0,
-
                   right: 0,
+                  bottom: 0,
 
-                  textAlign:
-                    "center"
+                  display:
+                    "flex",
+
+                  alignItems:
+                    "center",
+
+                  justifyContent:
+                    "center",
+
+                  backgroundColor:
+                    "rgba(0,0,0,0.35)",
+
+                  zIndex: 10
                 }}
               >
 
                 <Typography
                   color="white"
+                  fontWeight="bold"
                 >
                   Starting camera...
                 </Typography>
@@ -2256,8 +2281,6 @@ export default function CheckOut() {
 
           </Box>
 
-          {/* INSTRUCTIONS */}
-
           <Typography
             align="center"
             color="text.secondary"
@@ -2265,8 +2288,8 @@ export default function CheckOut() {
               mt: 2
             }}
           >
-            Point the camera at
-            the barcode.
+            Point the rear camera
+            at the barcode.
           </Typography>
 
           <Typography
@@ -2277,15 +2300,11 @@ export default function CheckOut() {
               mt: 1
             }}
           >
-            After the barcode is
-            detected, the product
-            will automatically be
-            added to the cart.
+            Keep the barcode inside
+            the white scanning area.
           </Typography>
 
         </DialogContent>
-
-        {/* CLOSE */}
 
         <DialogActions
           sx={{
@@ -2313,7 +2332,5 @@ export default function CheckOut() {
       </Dialog>
 
     </MainCard>
-
   );
-
 }
