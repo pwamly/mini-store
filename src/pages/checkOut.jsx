@@ -25,7 +25,7 @@ import MainCard from 'components/MainCard';
 
 import { Html5Qrcode, Html5QrcodeSupportedFormats } from 'html5-qrcode';
 
-import { searchProducts } from 'api/productApi';
+import { getProducts, searchProducts } from 'api/productApi';
 
 export default function CheckOut() {
   // =========================================================
@@ -112,32 +112,57 @@ export default function CheckOut() {
   // =========================================================
 
   const loadProducts = async () => {
-    setProductsLoading(true);
 
-    setError('');
+  setProductsLoading(true);
 
-    try {
-      const response = await searchProducts('');
+  try {
 
-      console.log('ALL PRODUCTS RESPONSE:', response);
+    const response =
+      await getProducts();
 
-      if (response?.successful && Array.isArray(response.data)) {
-        setProducts(response.data);
-      } else {
-        setProducts([]);
+    console.log(
+      "GET PRODUCTS RESPONSE:",
+      response
+    );
 
-        setError('Unable to load products.');
-      }
-    } catch (loadError) {
-      console.error('Load products error:', loadError);
+    if (
+      response?.successful &&
+      Array.isArray(response.data)
+    ) {
+
+      setProducts(
+        response.data
+      );
+
+    } else {
 
       setProducts([]);
 
-      setError(loadError?.message || 'Failed to load products.');
-    } finally {
-      setProductsLoading(false);
+      setError(
+        "Unable to load products."
+      );
     }
-  };
+
+  } catch (err) {
+
+    console.error(
+      "Load products error:",
+      err
+    );
+
+    setProducts([]);
+
+    setError(
+      err?.message ||
+      "Failed to load products."
+    );
+
+  } finally {
+
+    setProductsLoading(false);
+  }
+};
+
 
   // =========================================================
   // PRODUCT SEARCH
