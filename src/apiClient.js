@@ -7,6 +7,10 @@
 const API_BASE_URL =
   import.meta.env.VITE_API_BASE_URL || "/api";
 
+// Refresh token is NOT under /api/*
+const REFRESH_TOKEN_URL =
+  import.meta.env.VITE_REFRESH_TOKEN_URL || "/refresh_token";
+
 // =====================================================
 // REFRESH TOKEN
 // =====================================================
@@ -25,7 +29,7 @@ const refreshAccessToken = async () => {
   refreshPromise = (async () => {
     try {
       const response = await fetch(
-        `${API_BASE_URL}/refresh_token`,
+        REFRESH_TOKEN_URL,
         {
           method: "POST",
 
