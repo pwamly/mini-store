@@ -3,17 +3,87 @@
 // =====================================================
 // API BASE URL
 // =====================================================
-//
-// Production:
-// https://necbot.store/api
-//
-// Using a relative URL means the browser talks to the
-// same domain as the React application. Nginx then
-// forwards /api requests to the Node backend on :5000.
-// =====================================================
 
 const API_BASE_URL =
   import.meta.env.VITE_API_BASE_URL || "/api";
+
+// =====================================================
+// REFRESH TOKEN
+// =====================================================
+
+let isRefreshing = false;
+let refreshPromise = null;
+
+const refreshAccessToken = async () => {
+  // Prevent multiple simultaneous refresh requests.
+  if (isRefreshing && refreshPromise) {
+    return refreshPromise;
+  }
+
+  isRefreshing = true;
+
+  refreshPromise = (async () => {
+    try {
+      const response = await fetch(
+        `${API_BASE_URL}/refresh_token`,
+        {
+          method: "POST",
+
+          headers: {
+            "Content-Type": "application/json"
+          },
+
+          // Sends the HttpOnly `jto` cookie.
+          credentials: "include"
+        }
+      );
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(
+          data?.message ||
+          data?.error ||
+          "Refresh token expired"
+        );
+      }
+
+      // Backend returns `AccessToken`
+      if (!data?.AccessToken) {
+        throw new Error(
+          "Refresh response did not contain an access token"
+        );
+      }
+
+      // Save new access token
+      localStorage.setItem(
+        "accessToken",
+        data.AccessToken
+      );
+
+      return data.AccessToken;
+    } finally {
+      isRefreshing = false;
+      refreshPromise = null;
+    }
+  })();
+
+  return refreshPromise;
+};
+
+// =====================================================
+// LOGOUT / AUTH FAILURE
+// =====================================================
+
+const handleAuthenticationFailure = () => {
+  localStorage.removeItem("accessToken");
+
+  if (
+    window.location.pathname !== "/login"
+  ) {
+    window.location.href = "/login";
+  }
+};
 
 // =====================================================
 // COMMON API REQUEST
@@ -21,7 +91,8 @@ const API_BASE_URL =
 
 const apiRequest = async (
   endpoint,
-  options = {}
+  options = {},
+  isRetry = false
 ) => {
   const {
     method = "GET",
@@ -29,14 +100,13 @@ const apiRequest = async (
     headers = {}
   } = options;
 
-  // Get the latest access token from localStorage
+  // Get latest access token
   const accessToken =
     localStorage.getItem("accessToken");
 
   const requestHeaders = {
     "Content-Type": "application/json",
 
-    // Send Authorization header when token exists
     ...(accessToken
       ? {
           Authorization:
@@ -44,37 +114,63 @@ const apiRequest = async (
         }
       : {}),
 
-    // Allow individual requests to add/override headers
     ...headers
   };
 
-  const response =
-    await fetch(
-      `${API_BASE_URL}${endpoint}`,
-      {
-        method,
+  const response = await fetch(
+    `${API_BASE_URL}${endpoint}`,
+    {
+      method,
+      headers: requestHeaders,
+      credentials: "include",
 
-        headers:
-          requestHeaders,
+      body:
+        body !== undefined
+          ? JSON.stringify(body)
+          : undefined
+    }
+  );
 
-        credentials:
-          "include",
+  // ===================================================
+  // ACCESS TOKEN EXPIRED
+  // ===================================================
 
-        body:
-          body !== undefined
-            ? JSON.stringify(body)
-            : undefined
-      }
-    );
+  if (
+    response.status === 403 &&
+    !isRetry
+  ) {
+    try {
+      // Get a new access token
+      await refreshAccessToken();
+
+      // Retry original request once
+      return apiRequest(
+        endpoint,
+        options,
+        true
+      );
+    } catch (error) {
+      handleAuthenticationFailure();
+
+      throw error;
+    }
+  }
+
+  // ===================================================
+  // PARSE RESPONSE
+  // ===================================================
 
   let data = null;
 
   try {
-    data =
-      await response.json();
+    data = await response.json();
   } catch {
     data = null;
   }
+
+  // ===================================================
+  // ERROR
+  // ===================================================
 
   if (!response.ok) {
     throw new Error(
@@ -91,81 +187,54 @@ const apiRequest = async (
 // GET
 // =====================================================
 
-export const apiGet = (
-  endpoint
-) => {
-  return apiRequest(
-    endpoint,
-    {
-      method: "GET"
-    }
-  );
+export const apiGet = (endpoint) => {
+  return apiRequest(endpoint, {
+    method: "GET"
+  });
 };
 
 // =====================================================
 // POST
 // =====================================================
 
-export const apiPost = (
-  endpoint,
-  body
-) => {
-  return apiRequest(
-    endpoint,
-    {
-      method: "POST",
-      body
-    }
-  );
+export const apiPost = (endpoint, body) => {
+  return apiRequest(endpoint, {
+    method: "POST",
+    body
+  });
 };
 
 // =====================================================
 // PUT
 // =====================================================
 
-export const apiPut = (
-  endpoint,
-  body
-) => {
-  return apiRequest(
-    endpoint,
-    {
-      method: "PUT",
-      body
-    }
-  );
+export const apiPut = (endpoint, body) => {
+  return apiRequest(endpoint, {
+    method: "PUT",
+    body
+  });
 };
 
 // =====================================================
 // PATCH
 // =====================================================
 
-export const apiPatch = (
-  endpoint,
-  body
-) => {
-  return apiRequest(
-    endpoint,
-    {
-      method: "PATCH",
-      body
-    }
-  );
+export const apiPatch = (endpoint, body) => {
+  return apiRequest(endpoint, {
+    method: "PATCH",
+    body
+  });
 };
 
 // =====================================================
 // DELETE
 // =====================================================
 
-export const apiDelete = (
-  endpoint
-) => {
-  return apiRequest(
-    endpoint,
-    {
-      method: "DELETE"
-    }
-  );
+export const apiDelete = (endpoint) => {
+  return apiRequest(endpoint, {
+    method: "DELETE"
+  });
 };
 
 export default apiRequest;
+
