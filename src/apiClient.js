@@ -4,14 +4,12 @@
 // API BASE URL
 // =====================================================
 
-const API_BASE_URL =
-  import.meta.env.VITE_API_BASE_URL || "/api";
+const API_BASE_URL ="https://necbot.store/api";
 
 // const API_BASE_URL ="https://192.168.1.173:5000/api"
 // Refresh token is NOT under /api/*
 
-const REFRESH_TOKEN_URL =
-  import.meta.env.VITE_REFRESH_TOKEN_URL || "/refresh_token";
+const REFRESH_TOKEN_URL ="https://necbot.store/refresh_token";
 
 // const REFRESH_TOKEN_URL = "https://192.168.1.173:5000/refresh_token";
 
