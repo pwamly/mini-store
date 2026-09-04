@@ -127,7 +127,7 @@ const apiRequest = async (endpoint, options = {}, isRetry = false) => {
   if (response.status === 401) {
       handleAuthenticationFailure();
       throw error;
-    }
+    
   }
 
   // ===================================================
