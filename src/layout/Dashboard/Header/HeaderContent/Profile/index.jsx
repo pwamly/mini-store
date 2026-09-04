@@ -56,6 +56,8 @@ export default function Profile() {
   const handleToggle = () => {
     setOpen((prevOpen) => !prevOpen);
   };
+  const API_BASE_URL ="https://192.168.1.173:5000"
+
 
   const handleClose = (event) => {
     if (anchorRef.current && anchorRef.current.contains(event.target)) {
@@ -69,6 +71,43 @@ export default function Profile() {
   const handleChange = (event, newValue) => {
     setValue(newValue);
   };
+
+  // const handleLogout = () => {
+  //   localStorage.removeItem('accessToken');
+  //   window.location.href = '/mini-store/login';
+  // };
+
+  const handleLogout = async () => {
+  try {
+    const token = localStorage.getItem('accessToken');
+
+    const response = await fetch('/auth/logout', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      credentials: 'include',
+      body: JSON.stringify({
+        token
+      })
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(
+        data?.message || data?.error || 'Logout failed'
+      );
+    }
+
+    localStorage.removeItem('accessToken');
+
+    window.location.href = '/mini-store/login';
+  } catch (error) {
+    console.error('Logout error:', error);
+  }
+};
+
 
   return (
     <Box sx={{ flexShrink: 0, ml: 'auto' }}>
@@ -171,7 +210,7 @@ export default function Profile() {
                     </Tabs>
                   </Box>
                   <TabPanel value={value} index={0} dir={theme.direction}>
-                    <ProfileTab />
+                    <ProfileTab handleLogout={handleLogout} />{' '}
                   </TabPanel>
                   <TabPanel value={value} index={1} dir={theme.direction}>
                     <SettingTab />

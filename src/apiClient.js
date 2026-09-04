@@ -7,9 +7,13 @@
 const API_BASE_URL =
   import.meta.env.VITE_API_BASE_URL || "/api";
 
+// const API_BASE_URL ="https://192.168.1.173:5000/api"
 // Refresh token is NOT under /api/*
+
 const REFRESH_TOKEN_URL =
   import.meta.env.VITE_REFRESH_TOKEN_URL || "/refresh_token";
+
+// const REFRESH_TOKEN_URL = "https://192.168.1.173:5000/refresh_token";
 
 // =====================================================
 // REFRESH TOKEN
@@ -83,9 +87,9 @@ const handleAuthenticationFailure = () => {
   localStorage.removeItem("accessToken");
 
   if (
-    window.location.pathname !== "/login"
+    window.location.pathname !== "/mini-store/login"
   ) {
-    window.location.href = "/login";
+    window.location.href = "/mini-store/login";
   }
 };
 
@@ -154,8 +158,8 @@ const apiRequest = async (
         true
       );
     } catch (error) {
-      handleAuthenticationFailure();
 
+      handleAuthenticationFailure();
       throw error;
     }
   }

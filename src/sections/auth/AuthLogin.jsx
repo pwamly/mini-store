@@ -23,6 +23,8 @@ import AnimateButton from 'components/@extended/AnimateButton';
 import EyeOutlined from '@ant-design/icons/EyeOutlined';
 import EyeInvisibleOutlined from '@ant-design/icons/EyeInvisibleOutlined';
 
+// const API_BASE_URL = 'https://192.168.1.173:5000';
+
 export default function AuthLogin({ isDemo = false }) {
   const navigate = useNavigate();
 
@@ -45,90 +47,57 @@ export default function AuthLogin({ isDemo = false }) {
         submit: null
       }}
       validationSchema={Yup.object().shape({
-        email: Yup.string()
-          .required('Username is required'),
+        email: Yup.string().required('Username is required'),
 
-        password: Yup.string()
-          .required('Password is required')
+        password: Yup.string().required('Password is required')
       })}
-      onSubmit={async (
-        values,
-        { setSubmitting, setErrors }
-      ) => {
+      onSubmit={async (values, { setSubmitting, setErrors }) => {
         try {
-          const response = await fetch(
-            '/auth/login',
-            {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json'
-              },
-              body: JSON.stringify({
-                username: values.email,
-                password: values.password
-              })
-            }
-          );
+          const response = await fetch('/auth/login', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            credentials: 'include',
+            body: JSON.stringify({
+              username: values.email,
+              password: values.password
+            })
+          });
 
           const data = await response.json();
 
           if (!response.ok) {
-            throw new Error(
-              data?.message ||
-              data?.error ||
-              'Login failed'
-            );
+            throw new Error(data?.message || data?.error || 'Login failed');
           }
 
           // Adjust this depending on your API response.
-          const token =data.data?.access_token;
+          const token = data?.accessToken;
 
           if (!token) {
-            throw new Error(
-              'Login succeeded but no token was returned'
-            );
+            throw new Error('Login succeeded but no token was returned',data);
           }
 
-          localStorage.setItem(
-            'accessToken',
-            token
-          );
+          localStorage.setItem('accessToken', token);
 
-          navigate('/', {
+          navigate('/check-out', {
             replace: true
           });
-
         } catch (error) {
           setErrors({
-            submit:
-              error.message ||
-              'Unable to login'
+            submit: error.message || 'Unable to login'
           });
         } finally {
           setSubmitting(false);
         }
       }}
     >
-      {({
-        errors,
-        handleBlur,
-        handleChange,
-        handleSubmit,
-        isSubmitting,
-        touched,
-        values
-      }) => (
-        <form
-          noValidate
-          onSubmit={handleSubmit}
-        >
+      {({ errors, handleBlur, handleChange, handleSubmit, isSubmitting, touched, values }) => (
+        <form noValidate onSubmit={handleSubmit}>
           <Grid container spacing={3}>
-
             <Grid size={12}>
               <Stack sx={{ gap: 1 }}>
-                <InputLabel htmlFor="email-login">
-                  Username
-                </InputLabel>
+                <InputLabel htmlFor="email-login">Username</InputLabel>
 
                 <OutlinedInput
                   id="email-login"
@@ -139,39 +108,22 @@ export default function AuthLogin({ isDemo = false }) {
                   onChange={handleChange}
                   placeholder="Enter username"
                   fullWidth
-                  error={Boolean(
-                    touched.email &&
-                    errors.email
-                  )}
+                  error={Boolean(touched.email && errors.email)}
                 />
               </Stack>
 
-              {touched.email &&
-                errors.email && (
-                  <FormHelperText error>
-                    {errors.email}
-                  </FormHelperText>
-                )}
+              {touched.email && errors.email && <FormHelperText error>{errors.email}</FormHelperText>}
             </Grid>
 
             <Grid size={12}>
               <Stack sx={{ gap: 1 }}>
-                <InputLabel htmlFor="password-login">
-                  Password
-                </InputLabel>
+                <InputLabel htmlFor="password-login">Password</InputLabel>
 
                 <OutlinedInput
                   fullWidth
-                  error={Boolean(
-                    touched.password &&
-                    errors.password
-                  )}
+                  error={Boolean(touched.password && errors.password)}
                   id="password-login"
-                  type={
-                    showPassword
-                      ? 'text'
-                      : 'password'
-                  }
+                  type={showPassword ? 'text' : 'password'}
                   value={values.password}
                   name="password"
                   onBlur={handleBlur}
@@ -180,20 +132,12 @@ export default function AuthLogin({ isDemo = false }) {
                     <InputAdornment position="end">
                       <IconButton
                         aria-label="toggle password visibility"
-                        onClick={
-                          handleClickShowPassword
-                        }
-                        onMouseDown={
-                          handleMouseDownPassword
-                        }
+                        onClick={handleClickShowPassword}
+                        onMouseDown={handleMouseDownPassword}
                         edge="end"
                         color="secondary"
                       >
-                        {showPassword ? (
-                          <EyeOutlined />
-                        ) : (
-                          <EyeInvisibleOutlined />
-                        )}
+                        {showPassword ? <EyeOutlined /> : <EyeInvisibleOutlined />}
                       </IconButton>
                     </InputAdornment>
                   }
@@ -201,62 +145,38 @@ export default function AuthLogin({ isDemo = false }) {
                 />
               </Stack>
 
-              {touched.password &&
-                errors.password && (
-                  <FormHelperText error>
-                    {errors.password}
-                  </FormHelperText>
-                )}
+              {touched.password && errors.password && <FormHelperText error>{errors.password}</FormHelperText>}
             </Grid>
 
             {errors.submit && (
               <Grid size={12}>
-                <FormHelperText error>
-                  {errors.submit}
-                </FormHelperText>
+                <FormHelperText error>{errors.submit}</FormHelperText>
               </Grid>
             )}
 
-            <Grid
-              sx={{ mt: -1 }}
-              size={12}
-            >
+            <Grid sx={{ mt: -1 }} size={12}>
               <Stack
                 direction="row"
                 sx={{
                   gap: 2,
                   alignItems: 'baseline',
-                  justifyContent:
-                    'space-between'
+                  justifyContent: 'space-between'
                 }}
               >
                 <FormControlLabel
                   control={
                     <Checkbox
                       checked={checked}
-                      onChange={(event) =>
-                        setChecked(
-                          event.target.checked
-                        )
-                      }
+                      onChange={(event) => setChecked(event.target.checked)}
                       name="checked"
                       color="primary"
                       size="small"
                     />
                   }
-                  label={
-                    <Typography variant="h6">
-                      Keep me sign in
-                    </Typography>
-                  }
+                  label={<Typography variant="h6">Keep me sign in</Typography>}
                 />
 
-                <Link
-                  variant="h6"
-                  component={RouterLink}
-                  to="#"
-                  color="text.primary"
-                >
+                <Link variant="h6" component={RouterLink} to="#" color="text.primary">
                   Forgot Password?
                 </Link>
               </Stack>
@@ -264,21 +184,11 @@ export default function AuthLogin({ isDemo = false }) {
 
             <Grid size={12}>
               <AnimateButton>
-                <Button
-                  type="submit"
-                  fullWidth
-                  size="large"
-                  variant="contained"
-                  color="primary"
-                  disabled={isSubmitting}
-                >
-                  {isSubmitting
-                    ? 'Logging in...'
-                    : 'Login'}
+                <Button type="submit" fullWidth size="large" variant="contained" color="primary" disabled={isSubmitting}>
+                  {isSubmitting ? 'Logging in...' : 'Login'}
                 </Button>
               </AnimateButton>
             </Grid>
-
           </Grid>
         </form>
       )}
