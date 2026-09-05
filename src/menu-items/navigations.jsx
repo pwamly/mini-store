@@ -70,7 +70,13 @@ const navigations = {
       url: '/check-out',
       icon: icons.ShoppingCartOutlined
     },
-
+    {
+      id: 'pos',
+      title: 'Sales',
+      type: 'item',
+      url: '/sales',
+      icon: icons.SafetyCertificateOutlined
+    },
     {
       id: 'pos',
       title: 'Product Registration',

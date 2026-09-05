@@ -73,12 +73,14 @@ export default function AuthLogin({ isDemo = false }) {
 
           // Adjust this depending on your API response.
           const token = data?.accessToken;
+          const userId = data.profile?.id;
 
           if (!token) {
             throw new Error('Login succeeded but no token was returned',data);
           }
 
           localStorage.setItem('accessToken', token);
+          localStorage.setItem('userId', userId);
 
           navigate('/check-out', {
             replace: true

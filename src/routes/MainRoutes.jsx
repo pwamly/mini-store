@@ -21,11 +21,15 @@ const Shadow = Loadable(
 );
 
 const CheckOut = Loadable(
-  lazy(() => import('pages/checkOut'))
+  lazy(() => import('pages/sales/checkOut'))
+);
+
+const Sales = Loadable(
+  lazy(() => import('pages/sales/Sales'))
 );
 
 const ItemRegistration = Loadable(
-  lazy(() => import('pages/ItemRegistration'))
+  lazy(() => import('pages/products/ItemRegistration'))
 );
 
 const MainRoutes = {
@@ -64,6 +68,14 @@ const MainRoutes = {
         {
           path: 'check-out',
           element: <CheckOut />
+        },
+        {
+          path: 'check-out',
+          element: <CheckOut />
+        },
+        {
+          path: 'sales',
+          element: <Sales />
         },
         {
           path: 'product-registration',
