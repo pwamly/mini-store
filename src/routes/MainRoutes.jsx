@@ -32,6 +32,10 @@ const ItemRegistration = Loadable(
   lazy(() => import('pages/products/ItemRegistration'))
 );
 
+const Products = Loadable(
+  lazy(() => import('pages/products/GetProducts'))
+);
+
 const MainRoutes = {
   path: '/',
   element: <ProtectedRoute />,
@@ -80,6 +84,10 @@ const MainRoutes = {
         {
           path: 'product-registration',
           element: <ItemRegistration />
+        },
+        {
+          path: 'products',
+          element: <Products />
         }
       ]
     }
