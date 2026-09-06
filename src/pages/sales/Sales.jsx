@@ -61,7 +61,10 @@ export default function Sales() {
     transactions: 0,
     sales: 0,
     profit: 0,
-    items: 0
+    items: 0,
+    loanSales: 0,
+    loanOutstanding: 0,
+    loanPaid: 0
   });
 
   const [loading, setLoading] = useState(false);
@@ -121,6 +124,208 @@ export default function Sales() {
   };
 
   // =========================================================
+  // NORMALIZE PAYMENT METHOD
+  // =========================================================
+
+  const normalizePaymentMethod = (method) => {
+    if (!method) {
+      return '';
+    }
+
+    return String(method)
+      .trim()
+      .toLowerCase();
+  };
+
+  // =========================================================
+  // IS LOAN
+  // =========================================================
+
+  const isLoanSale = (sale) => {
+    return (
+      normalizePaymentMethod(
+        sale?.paymentMethod
+      ) === 'loan'
+    );
+  };
+
+  // =========================================================
+  // GET SALE TOTAL
+  // =========================================================
+
+  const getSaleTotal = (sale) => {
+    return Number(sale?.total) || 0;
+  };
+
+  // =========================================================
+  // GET LOAN PAID NOW
+  //
+  // Supports:
+  // paidNow
+  // amountPaid
+  // paidAmount
+  //
+  // This makes the page tolerant of different API naming
+  // while the backend is being standardized.
+  // =========================================================
+
+  const getLoanPaidNow = (sale) => {
+    if (!isLoanSale(sale)) {
+      return 0;
+    }
+
+    if (
+      sale?.paidNow !== undefined &&
+      sale?.paidNow !== null &&
+      sale?.paidNow !== ''
+    ) {
+      return Number(sale.paidNow) || 0;
+    }
+
+    if (
+      sale?.amountPaid !== undefined &&
+      sale?.amountPaid !== null &&
+      sale?.amountPaid !== ''
+    ) {
+      return Number(sale.amountPaid) || 0;
+    }
+
+    if (
+      sale?.paidAmount !== undefined &&
+      sale?.paidAmount !== null &&
+      sale?.paidAmount !== ''
+    ) {
+      return Number(sale.paidAmount) || 0;
+    }
+
+    return 0;
+  };
+
+  // =========================================================
+  // GET LOAN BALANCE
+  //
+  // Supports:
+  // balanceAmount
+  // balance
+  // outstandingBalance
+  //
+  // If the backend does not provide a balance, calculate:
+  //
+  // Total - Paid Now
+  // =========================================================
+
+  const getLoanBalance = (sale) => {
+    if (!isLoanSale(sale)) {
+      return 0;
+    }
+
+    if (
+      sale?.balanceAmount !== undefined &&
+      sale?.balanceAmount !== null &&
+      sale?.balanceAmount !== ''
+    ) {
+      return Math.max(
+        Number(sale.balanceAmount) || 0,
+        0
+      );
+    }
+
+    if (
+      sale?.balance !== undefined &&
+      sale?.balance !== null &&
+      sale?.balance !== ''
+    ) {
+      return Math.max(
+        Number(sale.balance) || 0,
+        0
+      );
+    }
+
+    if (
+      sale?.outstandingBalance !== undefined &&
+      sale?.outstandingBalance !== null &&
+      sale?.outstandingBalance !== ''
+    ) {
+      return Math.max(
+        Number(sale.outstandingBalance) || 0,
+        0
+      );
+    }
+
+    const total = getSaleTotal(sale);
+    const paidNow = getLoanPaidNow(sale);
+
+    return Math.max(
+      Number(
+        (total - paidNow).toFixed(2)
+      ),
+      0
+    );
+  };
+
+  // =========================================================
+  // GET CUSTOMER MOBILE
+  // =========================================================
+
+  const getCustomerMobile = (sale) => {
+    if (!sale) {
+      return null;
+    }
+
+    if (
+      sale.customerMobile !== undefined &&
+      sale.customerMobile !== null &&
+      String(sale.customerMobile).trim() !== ''
+    ) {
+      return String(
+        sale.customerMobile
+      ).trim();
+    }
+
+    if (
+      sale.phone !== undefined &&
+      sale.phone !== null &&
+      String(sale.phone).trim() !== ''
+    ) {
+      return String(sale.phone).trim();
+    }
+
+    if (
+      sale.mobile !== undefined &&
+      sale.mobile !== null &&
+      String(sale.mobile).trim() !== ''
+    ) {
+      return String(sale.mobile).trim();
+    }
+
+    return null;
+  };
+
+  // =========================================================
+  // GET LOAN PAYMENT STATUS
+  // =========================================================
+
+  const getLoanPaymentStatus = (sale) => {
+    if (!isLoanSale(sale)) {
+      return null;
+    }
+
+    const balance = getLoanBalance(sale);
+    const paidNow = getLoanPaidNow(sale);
+    const total = getSaleTotal(sale);
+
+    if (balance <= 0) {
+      return 'Paid';
+    }
+
+    if (paidNow > 0 && paidNow < total) {
+      return 'Partially Paid';
+    }
+
+    return 'Unpaid';
+  };
+
+  // =========================================================
   // LOAD SALES
   // =========================================================
 
@@ -129,8 +334,11 @@ export default function Sales() {
     setError('');
 
     try {
-      const currentPage = overrides.page ?? page;
-      const currentLimit = overrides.limit ?? limit;
+      const currentPage =
+        overrides.page ?? page;
+
+      const currentLimit =
+        overrides.limit ?? limit;
 
       const currentSearch =
         overrides.search !== undefined
@@ -149,7 +357,6 @@ export default function Sales() {
 
       // =====================================================
       // BUILD PARAMS
-      // Only include fields that actually have values.
       // =====================================================
 
       const params = {
@@ -169,23 +376,60 @@ export default function Sales() {
         params.endDate = currentEndDate;
       }
 
-      console.log('GET SALES PARAMS:', params);
+      console.log(
+        'GET SALES PARAMS:',
+        params
+      );
 
-      const response = await getSales(params);
+      const response =
+        await getSales(params);
 
-      console.log('GET SALES RESPONSE:', response);
+      console.log(
+        'GET SALES RESPONSE:',
+        response
+      );
 
       if (!response?.successful) {
         throw new Error(
-          response?.message || 'Unable to load sales.'
+          response?.message ||
+            'Unable to load sales.'
         );
       }
 
-      setSales(
+      const loadedSales =
         Array.isArray(response.data)
           ? response.data
-          : []
-      );
+          : [];
+
+      setSales(loadedSales);
+
+      // =====================================================
+      // CALCULATE LOAN SUMMARY
+      //
+      // We calculate these from the returned records so the
+      // UI also works with an older summary response.
+      // =====================================================
+
+      const loanSales =
+        loadedSales.filter(
+          (sale) => isLoanSale(sale)
+        );
+
+      const loanPaid =
+        loanSales.reduce(
+          (total, sale) =>
+            total +
+            getLoanPaidNow(sale),
+          0
+        );
+
+      const loanOutstanding =
+        loanSales.reduce(
+          (total, sale) =>
+            total +
+            getLoanBalance(sale),
+          0
+        );
 
       setSummary({
         transactions: Number(
@@ -202,6 +446,16 @@ export default function Sales() {
 
         items: Number(
           response.summary?.items || 0
+        ),
+
+        loanSales: loanSales.length,
+
+        loanOutstanding: Number(
+          loanOutstanding.toFixed(2)
+        ),
+
+        loanPaid: Number(
+          loanPaid.toFixed(2)
         )
       });
 
@@ -225,7 +479,10 @@ export default function Sales() {
         transactions: 0,
         sales: 0,
         profit: 0,
-        items: 0
+        items: 0,
+        loanSales: 0,
+        loanOutstanding: 0,
+        loanPaid: 0
       });
 
       setTotalPages(1);
@@ -242,22 +499,24 @@ export default function Sales() {
 
   // =========================================================
   // INITIAL LOAD
-  //
-  // Default:
-  // today
-  // 500 transactions
   // =========================================================
 
   useEffect(() => {
     loadSales();
-  }, [page, limit, startDate, endDate]);
+  }, [
+    page,
+    limit,
+    startDate,
+    endDate
+  ]);
 
   // =========================================================
   // SEARCH
   // =========================================================
 
   const handleSearch = () => {
-    const trimmedSearch = search.trim();
+    const trimmedSearch =
+      search.trim();
 
     if (page !== 1) {
       setPage(1);
@@ -279,10 +538,6 @@ export default function Sales() {
 
   // =========================================================
   // CLEAR FILTERS
-  //
-  // Reset to:
-  // Today's sales
-  // 500 transactions
   // =========================================================
 
   const clearFilters = () => {
@@ -325,7 +580,9 @@ export default function Sales() {
   // =========================================================
 
   const paymentLabel = (method) => {
-    switch (method) {
+    switch (
+      normalizePaymentMethod(method)
+    ) {
       case 'cash':
         return 'Cash';
 
@@ -341,6 +598,9 @@ export default function Sales() {
       case 'bank':
         return 'Bank';
 
+      case 'loan':
+        return 'Loan';
+
       default:
         return method || '-';
     }
@@ -351,7 +611,9 @@ export default function Sales() {
   // =========================================================
 
   const paymentColor = (method) => {
-    switch (method) {
+    switch (
+      normalizePaymentMethod(method)
+    ) {
       case 'cash':
         return 'success';
 
@@ -365,6 +627,9 @@ export default function Sales() {
       case 'bank':
         return 'info';
 
+      case 'loan':
+        return 'error';
+
       default:
         return 'default';
     }
@@ -375,7 +640,11 @@ export default function Sales() {
   // =========================================================
 
   const statusColor = (status) => {
-    switch (status) {
+    switch (
+      String(status || '')
+        .trim()
+        .toLowerCase()
+    ) {
       case 'completed':
         return 'success';
 
@@ -385,6 +654,15 @@ export default function Sales() {
 
       case 'pending':
         return 'warning';
+
+      case 'paid':
+        return 'success';
+
+      case 'partially paid':
+        return 'warning';
+
+      case 'unpaid':
+        return 'error';
 
       default:
         return 'default';
@@ -400,19 +678,27 @@ export default function Sales() {
       sale?.totalQuantity !== undefined &&
       sale?.totalQuantity !== null
     ) {
-      return Number(
-        sale.totalQuantity
-      ) || 0;
+      return (
+        Number(
+          sale.totalQuantity
+        ) || 0
+      );
     }
 
-    if (!Array.isArray(sale?.items)) {
+    if (
+      !Array.isArray(
+        sale?.items
+      )
+    ) {
       return 0;
     }
 
     return sale.items.reduce(
       (total, item) =>
         total +
-        (Number(item.quantity) || 0),
+        (Number(
+          item.quantity
+        ) || 0),
       0
     );
   };
@@ -455,10 +741,9 @@ export default function Sales() {
             color="text.secondary"
             sx={{ mt: 0.5 }}
           >
-            View and manage sales transactions.
+            View and manage sales
+            transactions.
           </Typography>
-
-          {/* CURRENT FILTER */}
 
           <Typography
             variant="caption"
@@ -473,14 +758,17 @@ export default function Sales() {
             {startDate === endDate
               ? startDate
               : `${startDate} to ${endDate}`}
-            {' '}• {limit.toLocaleString()} per page
+            {' '}• {limit.toLocaleString()}{' '}
+            per page
           </Typography>
 
         </Box>
 
         <Button
           variant="outlined"
-          onClick={() => loadSales()}
+          onClick={() =>
+            loadSales()
+          }
           disabled={loading}
           startIcon={
             <Box
@@ -507,7 +795,9 @@ export default function Sales() {
         <Alert
           severity="error"
           sx={{ mb: 3 }}
-          onClose={() => setError('')}
+          onClose={() =>
+            setError('')
+          }
         >
           {error}
         </Alert>
@@ -522,6 +812,8 @@ export default function Sales() {
         spacing={2}
         sx={{ mb: 3 }}
       >
+
+        {/* TRANSACTIONS */}
 
         <Grid
           item
@@ -551,6 +843,8 @@ export default function Sales() {
           </Card>
         </Grid>
 
+        {/* TOTAL SALES */}
+
         <Grid
           item
           xs={12}
@@ -573,12 +867,16 @@ export default function Sales() {
                 color="primary"
                 sx={{ mt: 1 }}
               >
-                {formatTZS(summary.sales)}
+                {formatTZS(
+                  summary.sales
+                )}
               </Typography>
 
             </CardContent>
           </Card>
         </Grid>
+
+        {/* PROFIT */}
 
         <Grid
           item
@@ -602,12 +900,16 @@ export default function Sales() {
                 color="success.main"
                 sx={{ mt: 1 }}
               >
-                {formatTZS(summary.profit)}
+                {formatTZS(
+                  summary.profit
+                )}
               </Typography>
 
             </CardContent>
           </Card>
         </Grid>
+
+        {/* ITEMS */}
 
         <Grid
           item
@@ -640,6 +942,127 @@ export default function Sales() {
       </Grid>
 
       {/* =====================================================
+          LOAN SUMMARY
+      ===================================================== */}
+
+      <Grid
+        container
+        spacing={2}
+        sx={{ mb: 3 }}
+      >
+
+        {/* LOAN TRANSACTIONS */}
+
+        <Grid
+          item
+          xs={12}
+          sm={4}
+        >
+          <Card
+            sx={{
+              borderLeft: '4px solid',
+              borderColor: 'error.main'
+            }}
+          >
+            <CardContent>
+
+              <Typography
+                variant="body2"
+                color="text.secondary"
+              >
+                Loan Transactions
+              </Typography>
+
+              <Typography
+                variant="h5"
+                fontWeight={700}
+                color="error.main"
+                sx={{ mt: 1 }}
+              >
+                {summary.loanSales.toLocaleString()}
+              </Typography>
+
+            </CardContent>
+          </Card>
+        </Grid>
+
+        {/* LOAN PAID */}
+
+        <Grid
+          item
+          xs={12}
+          sm={4}
+        >
+          <Card
+            sx={{
+              borderLeft: '4px solid',
+              borderColor: 'warning.main'
+            }}
+          >
+            <CardContent>
+
+              <Typography
+                variant="body2"
+                color="text.secondary"
+              >
+                Loan Paid at Sale
+              </Typography>
+
+              <Typography
+                variant="h5"
+                fontWeight={700}
+                color="warning.main"
+                sx={{ mt: 1 }}
+              >
+                {formatTZS(
+                  summary.loanPaid
+                )}
+              </Typography>
+
+            </CardContent>
+          </Card>
+        </Grid>
+
+        {/* OUTSTANDING */}
+
+        <Grid
+          item
+          xs={12}
+          sm={4}
+        >
+          <Card
+            sx={{
+              borderLeft: '4px solid',
+              borderColor: 'error.main'
+            }}
+          >
+            <CardContent>
+
+              <Typography
+                variant="body2"
+                color="text.secondary"
+              >
+                Outstanding Loan
+              </Typography>
+
+              <Typography
+                variant="h5"
+                fontWeight={700}
+                color="error.main"
+                sx={{ mt: 1 }}
+              >
+                {formatTZS(
+                  summary.loanOutstanding
+                )}
+              </Typography>
+
+            </CardContent>
+          </Card>
+        </Grid>
+
+      </Grid>
+
+      {/* =====================================================
           FILTERS
       ===================================================== */}
 
@@ -663,7 +1086,7 @@ export default function Sales() {
               <TextField
                 fullWidth
                 label="Search Sales"
-                placeholder="Invoice, customer, SKU or barcode"
+                placeholder="Invoice, customer, mobile, SKU or barcode"
                 value={search}
                 onChange={(event) =>
                   setSearch(
@@ -681,7 +1104,8 @@ export default function Sales() {
                         sx={{
                           fontSize: '1.4rem',
                           lineHeight: 1,
-                          color: 'text.secondary'
+                          color:
+                            'text.secondary'
                         }}
                       >
                         ⌕
@@ -808,7 +1232,9 @@ export default function Sales() {
                 <Button
                   variant="contained"
                   fullWidth
-                  onClick={handleSearch}
+                  onClick={
+                    handleSearch
+                  }
                   disabled={loading}
                 >
                   Search
@@ -816,7 +1242,9 @@ export default function Sales() {
 
                 <Button
                   variant="outlined"
-                  onClick={clearFilters}
+                  onClick={
+                    clearFilters
+                  }
                   disabled={loading}
                 >
                   Clear
@@ -887,7 +1315,8 @@ export default function Sales() {
 
         {/* LOADING */}
 
-        {loading && sales.length === 0 ? (
+        {loading &&
+        sales.length === 0 ? (
 
           <Box
             sx={{
@@ -909,9 +1338,7 @@ export default function Sales() {
 
         ) : sales.length === 0 ? (
 
-          /* =================================================
-             EMPTY STATE
-          ================================================= */
+          /* EMPTY STATE */
 
           <Box
             sx={{
@@ -951,9 +1378,7 @@ export default function Sales() {
 
         ) : (
 
-          /* =================================================
-             TABLE
-          ================================================= */
+          /* TABLE */
 
           <TableContainer
             sx={{
@@ -963,7 +1388,7 @@ export default function Sales() {
 
             <Table
               sx={{
-                minWidth: 1000
+                minWidth: 1150
               }}
             >
 
@@ -1000,6 +1425,10 @@ export default function Sales() {
                   </TableCell>
 
                   <TableCell align="right">
+                    Balance
+                  </TableCell>
+
+                  <TableCell align="right">
                     Profit
                   </TableCell>
 
@@ -1013,176 +1442,307 @@ export default function Sales() {
 
               <TableBody>
 
-                {sales.map((sale) => (
+                {sales.map((sale) => {
 
-                  <TableRow
-                    key={
-                      sale.id ||
-                      sale.invoiceNumber
-                    }
-                    hover
-                  >
+                  const loan =
+                    isLoanSale(
+                      sale
+                    );
 
-                    {/* INVOICE */}
+                  const loanBalance =
+                    getLoanBalance(
+                      sale
+                    );
 
-                    <TableCell>
+                  return (
+                    <TableRow
+                      key={
+                        sale.id ||
+                        sale.invoiceNumber
+                      }
+                      hover
+                    >
 
-                      <Typography
-                        fontWeight={700}
-                        sx={{
-                          whiteSpace:
-                            'nowrap'
-                        }}
-                      >
-                        {sale.invoiceNumber ||
-                          '-'}
-                      </Typography>
+                      {/* INVOICE */}
 
-                    </TableCell>
+                      <TableCell>
 
-                    {/* DATE */}
+                        <Typography
+                          fontWeight={700}
+                          sx={{
+                            whiteSpace:
+                              'nowrap'
+                          }}
+                        >
+                          {sale.invoiceNumber ||
+                            '-'}
+                        </Typography>
 
-                    <TableCell>
+                      </TableCell>
 
-                      <Typography
-                        variant="body2"
-                        sx={{
-                          whiteSpace:
-                            'nowrap'
-                        }}
-                      >
-                        {formatDateTime(
-                          sale.createdAt
-                        )}
-                      </Typography>
+                      {/* DATE */}
 
-                    </TableCell>
-
-                    {/* CUSTOMER */}
-
-                    <TableCell>
-
-                      {sale.customerName ? (
-
-                        sale.customerName
-
-                      ) : (
+                      <TableCell>
 
                         <Typography
                           variant="body2"
-                          color="text.secondary"
-                        >
-                          Walk-in Customer
-                        </Typography>
-
-                      )}
-
-                    </TableCell>
-
-                    {/* ITEMS */}
-
-                    <TableCell>
-
-                      <Typography fontWeight={700}>
-                        {getItemQuantity(
-                          sale
-                        )}
-                      </Typography>
-
-                    </TableCell>
-
-                    {/* PAYMENT */}
-
-                    <TableCell>
-
-                      <Chip
-                        size="small"
-                        label={paymentLabel(
-                          sale.paymentMethod
-                        )}
-                        color={paymentColor(
-                          sale.paymentMethod
-                        )}
-                      />
-
-                    </TableCell>
-
-                    {/* STATUS */}
-
-                    <TableCell>
-
-                      <Chip
-                        size="small"
-                        label={
-                          sale.status ||
-                          'unknown'
-                        }
-                        color={statusColor(
-                          sale.status
-                        )}
-                      />
-
-                    </TableCell>
-
-                    {/* TOTAL */}
-
-                    <TableCell align="right">
-
-                      <Typography fontWeight={700}>
-                        {formatTZS(
-                          sale.total
-                        )}
-                      </Typography>
-
-                    </TableCell>
-
-                    {/* PROFIT */}
-
-                    <TableCell align="right">
-
-                      <Typography
-                        fontWeight={700}
-                        color="success.main"
-                      >
-                        {formatTZS(
-                          sale.totalProfit
-                        )}
-                      </Typography>
-
-                    </TableCell>
-
-                    {/* ACTION */}
-
-                    <TableCell align="center">
-
-                      <IconButton
-                        color="primary"
-                        onClick={() =>
-                          handleViewSale(
-                            sale
-                          )
-                        }
-                        title="View sale"
-                      >
-
-                        <Box
-                          component="span"
                           sx={{
-                            fontSize:
-                              '1.25rem',
-                            lineHeight: 1
+                            whiteSpace:
+                              'nowrap'
                           }}
                         >
-                          👁
-                        </Box>
+                          {formatDateTime(
+                            sale.createdAt
+                          )}
+                        </Typography>
 
-                      </IconButton>
+                      </TableCell>
 
-                    </TableCell>
+                      {/* CUSTOMER */}
 
-                  </TableRow>
+                      <TableCell>
 
-                ))}
+                        <Typography
+                          fontWeight={
+                            sale.customerName
+                              ? 600
+                              : 400
+                          }
+                        >
+                          {sale.customerName ||
+                            'Walk-in Customer'}
+                        </Typography>
+
+                        {getCustomerMobile(
+                          sale
+                        ) && (
+
+                          <Typography
+                            variant="caption"
+                            color="text.secondary"
+                            display="block"
+                          >
+                            {getCustomerMobile(
+                              sale
+                            )}
+                          </Typography>
+
+                        )}
+
+                      </TableCell>
+
+                      {/* ITEMS */}
+
+                      <TableCell>
+
+                        <Typography
+                          fontWeight={700}
+                        >
+                          {getItemQuantity(
+                            sale
+                          )}
+                        </Typography>
+
+                      </TableCell>
+
+                      {/* PAYMENT */}
+
+                      <TableCell>
+
+                        <Stack
+                          spacing={0.5}
+                          alignItems="flex-start"
+                        >
+
+                          <Chip
+                            size="small"
+                            label={paymentLabel(
+                              sale.paymentMethod
+                            )}
+                            color={paymentColor(
+                              sale.paymentMethod
+                            )}
+                          />
+
+                          {loan && (
+                            <Typography
+                              variant="caption"
+                              color="error.main"
+                              fontWeight={600}
+                            >
+                              Balance:{' '}
+                              {formatTZS(
+                                loanBalance
+                              )}
+                            </Typography>
+                          )}
+
+                        </Stack>
+
+                      </TableCell>
+
+                      {/* STATUS */}
+
+                      <TableCell>
+
+                        {loan ? (
+
+                          <Stack
+                            spacing={0.5}
+                            alignItems="flex-start"
+                          >
+
+                            <Chip
+                              size="small"
+                              label={
+                                getLoanPaymentStatus(
+                                  sale
+                                )
+                              }
+                              color={
+                                statusColor(
+                                  getLoanPaymentStatus(
+                                    sale
+                                  )
+                                )
+                              }
+                            />
+
+                            <Typography
+                              variant="caption"
+                              color="text.secondary"
+                            >
+                              Sale:{' '}
+                              {sale.status ||
+                                'completed'}
+                            </Typography>
+
+                          </Stack>
+
+                        ) : (
+
+                          <Chip
+                            size="small"
+                            label={
+                              sale.status ||
+                              'unknown'
+                            }
+                            color={statusColor(
+                              sale.status
+                            )}
+                          />
+
+                        )}
+
+                      </TableCell>
+
+                      {/* TOTAL */}
+
+                      <TableCell align="right">
+
+                        <Typography
+                          fontWeight={700}
+                        >
+                          {formatTZS(
+                            sale.total
+                          )}
+                        </Typography>
+
+                        {loan && (
+                          <Typography
+                            variant="caption"
+                            color="text.secondary"
+                            display="block"
+                          >
+                            Paid:{' '}
+                            {formatTZS(
+                              getLoanPaidNow(
+                                sale
+                              )
+                            )}
+                          </Typography>
+                        )}
+
+                      </TableCell>
+
+                      {/* BALANCE */}
+
+                      <TableCell align="right">
+
+                        {loan ? (
+
+                          <Typography
+                            fontWeight={700}
+                            color={
+                              loanBalance > 0
+                                ? 'error.main'
+                                : 'success.main'
+                            }
+                          >
+                            {formatTZS(
+                              loanBalance
+                            )}
+                          </Typography>
+
+                        ) : (
+
+                          <Typography
+                            color="text.secondary"
+                          >
+                            -
+                          </Typography>
+
+                        )}
+
+                      </TableCell>
+
+                      {/* PROFIT */}
+
+                      <TableCell align="right">
+
+                        <Typography
+                          fontWeight={700}
+                          color="success.main"
+                        >
+                          {formatTZS(
+                            sale.totalProfit
+                          )}
+                        </Typography>
+
+                      </TableCell>
+
+                      {/* ACTION */}
+
+                      <TableCell align="center">
+
+                        <IconButton
+                          color="primary"
+                          onClick={() =>
+                            handleViewSale(
+                              sale
+                            )
+                          }
+                          title="View sale"
+                        >
+
+                          <Box
+                            component="span"
+                            sx={{
+                              fontSize:
+                                '1.25rem',
+                              lineHeight: 1
+                            }}
+                          >
+                            👁
+                          </Box>
+
+                        </IconButton>
+
+                      </TableCell>
+
+                    </TableRow>
+                  );
+                })}
 
               </TableBody>
 
@@ -1232,7 +1792,9 @@ export default function Sales() {
 
       <Dialog
         open={detailsOpen}
-        onClose={handleCloseDetails}
+        onClose={
+          handleCloseDetails
+        }
         fullWidth
         maxWidth="md"
       >
@@ -1275,15 +1837,33 @@ export default function Sales() {
 
             {selectedSale && (
 
-              <Chip
-                label={
-                  selectedSale.status ||
-                  'unknown'
-                }
-                color={statusColor(
-                  selectedSale.status
-                )}
-              />
+              <Stack
+                direction="row"
+                spacing={1}
+                flexWrap="wrap"
+                useFlexGap
+              >
+
+                <Chip
+                  label={paymentLabel(
+                    selectedSale.paymentMethod
+                  )}
+                  color={paymentColor(
+                    selectedSale.paymentMethod
+                  )}
+                />
+
+                <Chip
+                  label={
+                    selectedSale.status ||
+                    'unknown'
+                  }
+                  color={statusColor(
+                    selectedSale.status
+                  )}
+                />
+
+              </Stack>
 
             )}
 
@@ -1308,6 +1888,8 @@ export default function Sales() {
                 spacing={2}
               >
 
+                {/* INVOICE */}
+
                 <Grid
                   item
                   xs={12}
@@ -1327,6 +1909,8 @@ export default function Sales() {
                   </Typography>
 
                 </Grid>
+
+                {/* DATE */}
 
                 <Grid
                   item
@@ -1349,6 +1933,8 @@ export default function Sales() {
 
                 </Grid>
 
+                {/* CUSTOMER */}
+
                 <Grid
                   item
                   xs={12}
@@ -1367,7 +1953,50 @@ export default function Sales() {
                       'Walk-in Customer'}
                   </Typography>
 
+                  {getCustomerMobile(
+                    selectedSale
+                  ) && (
+
+                    <Typography
+                      variant="body2"
+                      color="text.secondary"
+                      sx={{ mt: 0.25 }}
+                    >
+                      Mobile:{' '}
+                      {
+                        getCustomerMobile(
+                          selectedSale
+                        )
+                      }
+                    </Typography>
+
+                  )}
+
                 </Grid>
+
+                {/* USER */}
+
+                <Grid
+                  item
+                  xs={12}
+                  sm={6}
+                >
+
+                  <Typography
+                    variant="caption"
+                    color="text.secondary"
+                  >
+                    User
+                  </Typography>
+
+                  <Typography fontWeight={700}>
+                    {selectedSale.userId ||
+                      '-'}
+                  </Typography>
+
+                </Grid>
+
+                {/* PAYMENT */}
 
                 <Grid
                   item
@@ -1398,7 +2027,300 @@ export default function Sales() {
 
                 </Grid>
 
+                {/* STATUS */}
+
+                <Grid
+                  item
+                  xs={12}
+                  sm={6}
+                >
+
+                  <Typography
+                    variant="caption"
+                    color="text.secondary"
+                  >
+                    Sale Status
+                  </Typography>
+
+                  <Box sx={{ mt: 0.5 }}>
+
+                    <Chip
+                      size="small"
+                      label={
+                        selectedSale.status ||
+                        'unknown'
+                      }
+                      color={statusColor(
+                        selectedSale.status
+                      )}
+                    />
+
+                  </Box>
+
+                </Grid>
+
               </Grid>
+
+              {/* =============================================
+                  LOAN INFORMATION
+              ============================================= */}
+
+              {isLoanSale(
+                selectedSale
+              ) && (
+
+                <>
+
+                  <Divider
+                    sx={{ my: 3 }}
+                  />
+
+                  <Typography
+                    variant="h6"
+                    gutterBottom
+                    fontWeight={700}
+                  >
+                    Loan Information
+                  </Typography>
+
+                  <Grid
+                    container
+                    spacing={2}
+                  >
+
+                    {/* LOAN STATUS */}
+
+                    <Grid
+                      item
+                      xs={12}
+                      sm={4}
+                    >
+
+                      <Card
+                        variant="outlined"
+                        sx={{
+                          height: '100%',
+                          borderColor:
+                            'error.main'
+                        }}
+                      >
+
+                        <CardContent>
+
+                          <Typography
+                            variant="body2"
+                            color="text.secondary"
+                          >
+                            Loan Status
+                          </Typography>
+
+                          <Box
+                            sx={{
+                              mt: 1
+                            }}
+                          >
+
+                            <Chip
+                              label={getLoanPaymentStatus(
+                                selectedSale
+                              )}
+                              color={statusColor(
+                                getLoanPaymentStatus(
+                                  selectedSale
+                                )
+                              )}
+                            />
+
+                          </Box>
+
+                        </CardContent>
+
+                      </Card>
+
+                    </Grid>
+
+                    {/* TOTAL */}
+
+                    <Grid
+                      item
+                      xs={12}
+                      sm={4}
+                    >
+
+                      <Card
+                        variant="outlined"
+                        sx={{
+                          height: '100%'
+                        }}
+                      >
+
+                        <CardContent>
+
+                          <Typography
+                            variant="body2"
+                            color="text.secondary"
+                          >
+                            Loan Total
+                          </Typography>
+
+                          <Typography
+                            variant="h6"
+                            fontWeight={700}
+                            sx={{ mt: 1 }}
+                          >
+                            {formatTZS(
+                              getSaleTotal(
+                                selectedSale
+                              )
+                            )}
+                          </Typography>
+
+                        </CardContent>
+
+                      </Card>
+
+                    </Grid>
+
+                    {/* PAID NOW */}
+
+                    <Grid
+                      item
+                      xs={12}
+                      sm={4}
+                    >
+
+                      <Card
+                        variant="outlined"
+                        sx={{
+                          height: '100%',
+                          borderColor:
+                            'success.main'
+                        }}
+                      >
+
+                        <CardContent>
+
+                          <Typography
+                            variant="body2"
+                            color="text.secondary"
+                          >
+                            Paid Now
+                          </Typography>
+
+                          <Typography
+                            variant="h6"
+                            fontWeight={700}
+                            color="success.main"
+                            sx={{ mt: 1 }}
+                          >
+                            {formatTZS(
+                              getLoanPaidNow(
+                                selectedSale
+                              )
+                            )}
+                          </Typography>
+
+                        </CardContent>
+
+                      </Card>
+
+                    </Grid>
+
+                    {/* OUTSTANDING */}
+
+                    <Grid
+                      item
+                      xs={12}
+                    >
+
+                      <Card
+                        variant="outlined"
+                        sx={{
+                          borderColor:
+                            'error.main',
+                          backgroundColor:
+                            'rgba(211, 47, 47, 0.04)'
+                        }}
+                      >
+
+                        <CardContent>
+
+                          <Stack
+                            direction={{
+                              xs: 'column',
+                              sm: 'row'
+                            }}
+                            justifyContent="space-between"
+                            alignItems={{
+                              xs: 'flex-start',
+                              sm: 'center'
+                            }}
+                            spacing={1}
+                          >
+
+                            <Box>
+
+                              <Typography
+                                variant="body2"
+                                color="text.secondary"
+                              >
+                                Outstanding
+                                Balance
+                              </Typography>
+
+                              <Typography
+                                variant="h5"
+                                fontWeight={700}
+                                color={
+                                  getLoanBalance(
+                                    selectedSale
+                                  ) > 0
+                                    ? 'error.main'
+                                    : 'success.main'
+                                }
+                                sx={{
+                                  mt: 0.5
+                                }}
+                              >
+                                {formatTZS(
+                                  getLoanBalance(
+                                    selectedSale
+                                  )
+                                )}
+                              </Typography>
+
+                            </Box>
+
+                            <Chip
+                              label={
+                                getLoanBalance(
+                                  selectedSale
+                                ) > 0
+                                  ? 'Amount Due'
+                                  : 'Fully Paid'
+                              }
+                              color={
+                                getLoanBalance(
+                                  selectedSale
+                                ) > 0
+                                  ? 'error'
+                                  : 'success'
+                              }
+                            />
+
+                          </Stack>
+
+                        </CardContent>
+
+                      </Card>
+
+                    </Grid>
+
+                  </Grid>
+
+                </>
+
+              )}
 
               <Divider sx={{ my: 3 }} />
 
@@ -1417,7 +2339,8 @@ export default function Sales() {
               <TableContainer
                 sx={{
                   border: '1px solid',
-                  borderColor: 'divider',
+                  borderColor:
+                    'divider',
                   borderRadius: 2,
                   overflowX: 'auto'
                 }}
@@ -1476,7 +2399,9 @@ export default function Sales() {
 
                           <Typography
                             color="text.secondary"
-                            sx={{ py: 2 }}
+                            sx={{
+                              py: 2
+                            }}
                           >
                             No item details
                             available.
@@ -1506,7 +2431,9 @@ export default function Sales() {
 
                             <TableCell>
 
-                              <Typography fontWeight={700}>
+                              <Typography
+                                fontWeight={700}
+                              >
                                 {item.productName ||
                                   'Unnamed Product'}
                               </Typography>
@@ -1554,7 +2481,9 @@ export default function Sales() {
 
                             <TableCell align="right">
 
-                              <Typography fontWeight={700}>
+                              <Typography
+                                fontWeight={700}
+                              >
                                 {formatTZS(
                                   item.subtotal
                                 )}
@@ -1689,8 +2618,9 @@ export default function Sales() {
 
                   {/* CASH */}
 
-                  {selectedSale.paymentMethod ===
-                    'cash' && (
+                  {normalizePaymentMethod(
+                    selectedSale.paymentMethod
+                  ) === 'cash' && (
 
                     <>
 
@@ -1728,6 +2658,70 @@ export default function Sales() {
                         >
                           {formatTZS(
                             selectedSale.changeAmount
+                          )}
+                        </Typography>
+
+                      </Box>
+
+                    </>
+
+                  )}
+
+                  {/* LOAN PAYMENT */}
+
+                  {isLoanSale(
+                    selectedSale
+                  ) && (
+
+                    <>
+
+                      <Divider />
+
+                      <Box
+                        display="flex"
+                        justifyContent="space-between"
+                      >
+
+                        <Typography>
+                          Paid Now
+                        </Typography>
+
+                        <Typography
+                          fontWeight={700}
+                          color="success.main"
+                        >
+                          {formatTZS(
+                            getLoanPaidNow(
+                              selectedSale
+                            )
+                          )}
+                        </Typography>
+
+                      </Box>
+
+                      <Box
+                        display="flex"
+                        justifyContent="space-between"
+                      >
+
+                        <Typography fontWeight={700}>
+                          Outstanding Balance
+                        </Typography>
+
+                        <Typography
+                          fontWeight={700}
+                          color={
+                            getLoanBalance(
+                              selectedSale
+                            ) > 0
+                              ? 'error.main'
+                              : 'success.main'
+                          }
+                        >
+                          {formatTZS(
+                            getLoanBalance(
+                              selectedSale
+                            )
                           )}
                         </Typography>
 

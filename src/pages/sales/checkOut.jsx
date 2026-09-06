@@ -42,11 +42,31 @@ export default function CheckOut() {
 
   const [productsLoading, setProductsLoading] = useState(false);
 
+  // ---------------------------------------------------------
+  // CUSTOMER
+  // ---------------------------------------------------------
+
   const [customerName, setCustomerName] = useState('');
+
+  const [customerMobile, setCustomerMobile] = useState('');
+
+  // ---------------------------------------------------------
+  // PAYMENT
+  // ---------------------------------------------------------
 
   const [paymentMethod, setPaymentMethod] = useState('cash');
 
   const [cashGiven, setCashGiven] = useState('');
+
+  // For loan:
+  // Defaults to total and can be reduced for partial loan payment.
+  const [paidNow, setPaidNow] = useState('');
+
+  const previousTotalRef = useRef(0);
+
+  // ---------------------------------------------------------
+  // SCANNER
+  // ---------------------------------------------------------
 
   const [scannerOpen, setScannerOpen] = useState(false);
 
@@ -54,13 +74,22 @@ export default function CheckOut() {
 
   const [loadingProduct, setLoadingProduct] = useState(false);
 
+  // ---------------------------------------------------------
+  // SALE
+  // ---------------------------------------------------------
+
   const [error, setError] = useState('');
 
   const [scannerError, setScannerError] = useState('');
+
   const [saleLoading, setSaleLoading] = useState(false);
+
   const [successDialogOpen, setSuccessDialogOpen] = useState(false);
+
   const [successMessage, setSuccessMessage] = useState('');
+
   const [pendingSale, setPendingSale] = useState(null);
+
   const [confirmSaleDialogOpen, setConfirmSaleDialogOpen] = useState(false);
 
   // =========================================================
@@ -75,10 +104,8 @@ export default function CheckOut() {
 
   const scannerStartingRef = useRef(false);
 
-  // Search debounce timer
   const searchTimerRef = useRef(null);
 
-  // Prevent old API responses from replacing newer results
   const searchRequestRef = useRef(0);
 
   // =========================================================
@@ -141,7 +168,6 @@ export default function CheckOut() {
         setError('');
       } else {
         setProducts([]);
-
         setError(response?.message || 'Unable to load products.');
       }
     } catch (err) {
@@ -162,10 +188,6 @@ export default function CheckOut() {
   const searchProductsFromApi = async (searchValue) => {
     const search = String(searchValue || '').trim();
 
-    // -------------------------------------------------------
-    // EMPTY SEARCH
-    // -------------------------------------------------------
-
     if (!search) {
       const requestId = ++searchRequestRef.current;
 
@@ -175,7 +197,6 @@ export default function CheckOut() {
       try {
         const response = await getProducts();
 
-        // Ignore old response
         if (requestId !== searchRequestRef.current) {
           return;
         }
@@ -206,10 +227,6 @@ export default function CheckOut() {
       return;
     }
 
-    // -------------------------------------------------------
-    // NEW SEARCH REQUEST
-    // -------------------------------------------------------
-
     const requestId = ++searchRequestRef.current;
 
     setProductsLoading(true);
@@ -223,17 +240,9 @@ export default function CheckOut() {
 
       console.log('SEARCH PRODUCTS RESPONSE:', response);
 
-      // -----------------------------------------------------
-      // IGNORE OLD RESPONSE
-      // -----------------------------------------------------
-
       if (requestId !== searchRequestRef.current) {
         return;
       }
-
-      // -----------------------------------------------------
-      // SUCCESS
-      // -----------------------------------------------------
 
       if (response?.successful && Array.isArray(response.data)) {
         setProducts(response.data);
@@ -243,10 +252,6 @@ export default function CheckOut() {
         setError(response?.message || 'Unable to search products.');
       }
     } catch (err) {
-      // -----------------------------------------------------
-      // IGNORE OLD RESPONSE
-      // -----------------------------------------------------
-
       if (requestId !== searchRequestRef.current) {
         return;
       }
@@ -266,42 +271,19 @@ export default function CheckOut() {
   // =========================================================
   // SEARCH INPUT CHANGE
   // =========================================================
-  //
-  // IMPORTANT:
-  //
-  // setProductSearch() happens immediately.
-  //
-  // The API call happens separately after 400ms.
-  //
-  // This prevents the API from blocking normal typing.
-  // =========================================================
 
   const handleProductSearchChange = (event) => {
     const value = event.target.value;
 
-    // -------------------------------------------------------
-    // UPDATE INPUT IMMEDIATELY
-    // -------------------------------------------------------
-
     setProductSearch(value);
-
-    // -------------------------------------------------------
-    // CANCEL PREVIOUS SEARCH TIMER
-    // -------------------------------------------------------
 
     if (searchTimerRef.current) {
       clearTimeout(searchTimerRef.current);
     }
 
-    // Clear old errors while typing
     setError('');
 
-    // -------------------------------------------------------
-    // EMPTY SEARCH
-    // -------------------------------------------------------
-
     if (!value.trim()) {
-      // Invalidate any running search
       searchRequestRef.current += 1;
 
       searchTimerRef.current = setTimeout(() => {
@@ -310,10 +292,6 @@ export default function CheckOut() {
 
       return;
     }
-
-    // -------------------------------------------------------
-    // DEBOUNCED SEARCH
-    // -------------------------------------------------------
 
     searchTimerRef.current = setTimeout(() => {
       searchProductsFromApi(value);
@@ -325,7 +303,9 @@ export default function CheckOut() {
   // =========================================================
 
   const createCartProduct = (product) => {
-    const primaryBarcode = product.barcodes?.find((item) => item.isPrimary === true) || product.barcodes?.[0];
+    const primaryBarcode =
+      product.barcodes?.find((item) => item.isPrimary === true) ||
+      product.barcodes?.[0];
 
     return {
       id: product.id,
@@ -350,7 +330,9 @@ export default function CheckOut() {
 
       categoryId: product.categoryId,
 
-      weight: product.details?.netWeight ? `${product.details.netWeight}${product.details.weightUnit || ''}` : '',
+      weight: product.details?.netWeight
+        ? `${product.details.netWeight}${product.details.weightUnit || ''}`
+        : '',
 
       unit: product.unit?.name || '',
 
@@ -399,18 +381,14 @@ export default function CheckOut() {
 
     addToCart(cartProduct);
 
-    // Clear search
     setProductSearch('');
 
-    // Cancel pending search
     if (searchTimerRef.current) {
       clearTimeout(searchTimerRef.current);
     }
 
-    // Invalidate previous API requests
     searchRequestRef.current += 1;
 
-    // Load normal products again
     searchProductsFromApi('');
 
     setTimeout(() => {
@@ -438,7 +416,11 @@ export default function CheckOut() {
 
       console.log('PRODUCT SEARCH RESPONSE:', response);
 
-      if (!response?.successful || !Array.isArray(response.data) || response.data.length === 0) {
+      if (
+        !response?.successful ||
+        !Array.isArray(response.data) ||
+        response.data.length === 0
+      ) {
         setError(`No product found for "${cleanCode}".`);
 
         return;
@@ -474,7 +456,9 @@ export default function CheckOut() {
 
   const addToCart = (product) => {
     setCartItems((currentItems) => {
-      const existing = currentItems.find((item) => String(item.id) === String(product.id));
+      const existing = currentItems.find(
+        (item) => String(item.id) === String(product.id)
+      );
 
       if (existing) {
         return currentItems.map((item) => {
@@ -509,7 +493,6 @@ export default function CheckOut() {
         String(item.id) === String(id)
           ? {
               ...item,
-
               qty: Number(item.qty) + 1
             }
           : item
@@ -524,7 +507,6 @@ export default function CheckOut() {
           String(item.id) === String(id)
             ? {
                 ...item,
-
                 qty: Number(item.qty) - 1
               }
             : item
@@ -534,7 +516,9 @@ export default function CheckOut() {
   };
 
   const removeItem = (id) => {
-    setCartItems((items) => items.filter((item) => String(item.id) !== String(id)));
+    setCartItems((items) =>
+      items.filter((item) => String(item.id) !== String(id))
+    );
   };
 
   // =========================================================
@@ -548,21 +532,24 @@ export default function CheckOut() {
 
     setCustomerName('');
 
+    setCustomerMobile('');
+
     setPaymentMethod('cash');
 
     setCashGiven('');
 
+    setPaidNow('');
+
     setError('');
 
-    // Cancel pending search
+    previousTotalRef.current = 0;
+
     if (searchTimerRef.current) {
       clearTimeout(searchTimerRef.current);
     }
 
-    // Invalidate running search
     searchRequestRef.current += 1;
 
-    // Reload normal products
     searchProductsFromApi('');
 
     setTimeout(() => {
@@ -574,11 +561,57 @@ export default function CheckOut() {
   // TOTALS
   // =========================================================
 
-  const subtotal = cartItems.reduce((sum, item) => sum + Number(item.qty) * Number(item.price), 0);
+  const subtotal = cartItems.reduce(
+    (sum, item) => sum + Number(item.qty) * Number(item.price),
+    0
+  );
 
   const tax = 0;
 
   const total = subtotal + tax;
+
+  // =========================================================
+  // LOAN DEFAULT PAID NOW
+  // =========================================================
+  //
+  // When total changes:
+  //
+  // - If cashier has not changed Paid Now manually,
+  //   keep it equal to the new total.
+  //
+  // - If cashier already entered a partial payment,
+  //   do NOT overwrite it.
+  //
+  // Example:
+  //
+  // Total = 12,500
+  // Paid Now = 12,500
+  //
+  // Cashier changes Paid Now to 5,000
+  // Loan Balance = 7,500
+  //
+  // =========================================================
+
+  useEffect(() => {
+    if (paymentMethod !== 'loan') {
+      previousTotalRef.current = total;
+      return;
+    }
+
+    const previousTotal = previousTotalRef.current;
+
+    const currentPaidNow = Number(paidNow);
+
+    const shouldAutomaticallyUpdate =
+      paidNow === '' ||
+      currentPaidNow === previousTotal;
+
+    if (shouldAutomaticallyUpdate) {
+      setPaidNow(String(total));
+    }
+
+    previousTotalRef.current = total;
+  }, [total, paymentMethod, paidNow]);
 
   // =========================================================
   // CASH
@@ -586,9 +619,86 @@ export default function CheckOut() {
 
   const cashAmount = Number(cashGiven) || 0;
 
-  const insufficientCash = paymentMethod === 'cash' && cashGiven !== '' && cashAmount < total;
+  const insufficientCash =
+    paymentMethod === 'cash' &&
+    cashGiven !== '' &&
+    cashAmount < total;
 
-  const change = paymentMethod === 'cash' ? Math.max(cashAmount - total, 0) : 0;
+  const change =
+    paymentMethod === 'cash'
+      ? Math.max(cashAmount - total, 0)
+      : 0;
+
+  // =========================================================
+  // LOAN
+  // =========================================================
+
+  const loanPaidAmount = Number(paidNow) || 0;
+
+  const invalidLoanPaidNow =
+    paymentMethod === 'loan' &&
+    paidNow !== '' &&
+    (loanPaidAmount < 0 || loanPaidAmount > total);
+
+  const loanBalance =
+    paymentMethod === 'loan'
+      ? Math.max(total - loanPaidAmount, 0)
+      : 0;
+
+  const fullLoanPaid =
+    paymentMethod === 'loan' &&
+    paidNow !== '' &&
+    loanPaidAmount === total;
+
+  const partialLoan =
+    paymentMethod === 'loan' &&
+    paidNow !== '' &&
+    loanPaidAmount > 0 &&
+    loanPaidAmount < total;
+
+  const unpaidLoan =
+    paymentMethod === 'loan' &&
+    paidNow !== '' &&
+    loanPaidAmount === 0 &&
+    total > 0;
+
+  // =========================================================
+  // LOAN CUSTOMER VALIDATION
+  // =========================================================
+
+  const loanCustomerNameMissing =
+    paymentMethod === 'loan' &&
+    !customerName.trim();
+
+  const loanCustomerMobileMissing =
+    paymentMethod === 'loan' &&
+    !customerMobile.trim();
+
+  // =========================================================
+  // PAYMENT METHOD CHANGE
+  // =========================================================
+
+  const handlePaymentMethodChange = (event) => {
+    const method = event.target.value;
+
+    setPaymentMethod(method);
+
+    setError('');
+
+    if (method === 'loan') {
+      // Automatically start loan with full payment.
+      setPaidNow(String(total));
+
+      // Cash is irrelevant for loan.
+      setCashGiven('');
+    } else {
+      setPaidNow('');
+    }
+
+    if (method !== 'cash') {
+      setCashGiven('');
+    }
+  };
 
   // =========================================================
   // OPEN SCANNER
@@ -651,17 +761,26 @@ export default function CheckOut() {
       setScannerError('');
 
       if (!window.isSecureContext) {
-        throw new Error('Camera requires HTTPS. Open this POS using HTTPS, not HTTP.');
+        throw new Error(
+          'Camera requires HTTPS. Open this POS using HTTPS, not HTTP.'
+        );
       }
 
-      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-        throw new Error('This browser does not support camera access.');
+      if (
+        !navigator.mediaDevices ||
+        !navigator.mediaDevices.getUserMedia
+      ) {
+        throw new Error(
+          'This browser does not support camera access.'
+        );
       }
 
       const reader = document.getElementById('barcode-reader');
 
       if (!reader) {
-        throw new Error('Barcode scanner element was not found.');
+        throw new Error(
+          'Barcode scanner element was not found.'
+        );
       }
 
       if (scannerRef.current) {
@@ -688,19 +807,12 @@ export default function CheckOut() {
 
       const formats = [
         Html5QrcodeSupportedFormats.EAN_13,
-
         Html5QrcodeSupportedFormats.EAN_8,
-
         Html5QrcodeSupportedFormats.UPC_A,
-
         Html5QrcodeSupportedFormats.UPC_E,
-
         Html5QrcodeSupportedFormats.CODE_128,
-
         Html5QrcodeSupportedFormats.CODE_39,
-
         Html5QrcodeSupportedFormats.CODE_93,
-
         Html5QrcodeSupportedFormats.ITF
       ];
 
@@ -726,7 +838,10 @@ export default function CheckOut() {
 
         console.log('BARCODE DETECTED:', decodedText);
 
-        console.log('FORMAT:', decodedResult?.result?.format?.formatName);
+        console.log(
+          'FORMAT:',
+          decodedResult?.result?.format?.formatName
+        );
 
         try {
           await stopScanner();
@@ -735,9 +850,15 @@ export default function CheckOut() {
 
           await scanProduct(decodedText);
         } catch (scanError) {
-          console.error('Barcode processing error:', scanError);
+          console.error(
+            'Barcode processing error:',
+            scanError
+          );
 
-          setScannerError(scanError?.message || 'Failed to process barcode.');
+          setScannerError(
+            scanError?.message ||
+              'Failed to process barcode.'
+          );
         } finally {
           scanProcessingRef.current = false;
         }
@@ -759,36 +880,62 @@ export default function CheckOut() {
         onScanFailure
       );
 
-      const video = document.querySelector('#barcode-reader video');
+      const video = document.querySelector(
+        '#barcode-reader video'
+      );
 
       if (video) {
         video.setAttribute('playsinline', 'true');
 
-        video.setAttribute('webkit-playsinline', 'true');
+        video.setAttribute(
+          'webkit-playsinline',
+          'true'
+        );
 
         video.muted = true;
 
-        console.log('iPhone camera video:', video.videoWidth, 'x', video.videoHeight);
+        console.log(
+          'iPhone camera video:',
+          video.videoWidth,
+          'x',
+          video.videoHeight
+        );
       }
 
       setScannerLoading(false);
     } catch (cameraError) {
-      console.error('FULL CAMERA ERROR:', cameraError);
+      console.error(
+        'FULL CAMERA ERROR:',
+        cameraError
+      );
 
       setScannerLoading(false);
 
       let message = 'Unable to start camera.';
 
       if (cameraError?.name === 'NotAllowedError') {
-        message = 'Camera permission was denied. On iPhone, go to Settings → Safari → Camera and allow this website.';
-      } else if (cameraError?.name === 'NotFoundError') {
-        message = 'No camera was found on this device.';
-      } else if (cameraError?.name === 'NotReadableError') {
-        message = 'The camera could not be opened. Close other apps using the camera and try again.';
-      } else if (cameraError?.name === 'OverconstrainedError') {
-        message = 'The requested camera is not available. Trying the iPhone camera again may fix this.';
-      } else if (cameraError?.name === 'SecurityError') {
-        message = 'Safari blocked camera access. Make sure this page is loaded using HTTPS.';
+        message =
+          'Camera permission was denied. On iPhone, go to Settings → Safari → Camera and allow this website.';
+      } else if (
+        cameraError?.name === 'NotFoundError'
+      ) {
+        message =
+          'No camera was found on this device.';
+      } else if (
+        cameraError?.name === 'NotReadableError'
+      ) {
+        message =
+          'The camera could not be opened. Close other apps using the camera and try again.';
+      } else if (
+        cameraError?.name === 'OverconstrainedError'
+      ) {
+        message =
+          'The requested camera is not available. Trying the iPhone camera again may fix this.';
+      } else if (
+        cameraError?.name === 'SecurityError'
+      ) {
+        message =
+          'Safari blocked camera access. Make sure this page is loaded using HTTPS.';
       } else if (cameraError?.message) {
         message = cameraError.message;
       }
@@ -800,7 +947,10 @@ export default function CheckOut() {
           await scannerRef.current.stop();
         }
       } catch (stopError) {
-        console.log('Failed scanner stop:', stopError);
+        console.log(
+          'Failed scanner stop:',
+          stopError
+        );
       }
 
       try {
@@ -808,7 +958,10 @@ export default function CheckOut() {
           await scannerRef.current.clear();
         }
       } catch (clearError) {
-        console.log('Failed scanner clear:', clearError);
+        console.log(
+          'Failed scanner clear:',
+          clearError
+        );
       }
 
       scannerRef.current = null;
@@ -833,13 +986,19 @@ export default function CheckOut() {
         await scanner.stop();
       }
     } catch (stopError) {
-      console.error('Scanner stop error:', stopError);
+      console.error(
+        'Scanner stop error:',
+        stopError
+      );
     }
 
     try {
       await scanner.clear();
     } catch (clearError) {
-      console.error('Scanner clear error:', clearError);
+      console.error(
+        'Scanner clear error:',
+        clearError
+      );
     }
 
     scannerRef.current = null;
@@ -870,6 +1029,7 @@ export default function CheckOut() {
   // =========================================================
   // COMPLETE SALE
   // =========================================================
+
   const completeSale = async () => {
     setError('');
 
@@ -879,7 +1039,54 @@ export default function CheckOut() {
 
     if (cartItems.length === 0) {
       setError('Please add at least one product.');
+
       return;
+    }
+
+    // -------------------------------------------------------
+    // VALIDATE LOAN CUSTOMER
+    // -------------------------------------------------------
+
+    if (paymentMethod === 'loan') {
+      if (!customerName.trim()) {
+        setError(
+          'Customer full name is required for a loan sale.'
+        );
+
+        return;
+      }
+
+      if (!customerMobile.trim()) {
+        setError(
+          'Customer mobile number is required for a loan sale.'
+        );
+
+        return;
+      }
+
+      if (paidNow === '') {
+        setError(
+          'Please enter the amount paid now.'
+        );
+
+        return;
+      }
+
+      if (loanPaidAmount < 0) {
+        setError(
+          'Paid now cannot be less than 0.'
+        );
+
+        return;
+      }
+
+      if (loanPaidAmount > total) {
+        setError(
+          `Paid now cannot be greater than the total of ${formatTZS(total)}.`
+        );
+
+        return;
+      }
     }
 
     // -------------------------------------------------------
@@ -888,12 +1095,20 @@ export default function CheckOut() {
 
     if (paymentMethod === 'cash') {
       if (cashGiven === '') {
-        setError('Please enter the total cash given by the customer.');
+        setError(
+          'Please enter the total cash given by the customer.'
+        );
+
         return;
       }
 
       if (cashAmount < total) {
-        setError(`Insufficient cash. Customer still needs ${formatTZS(total - cashAmount)}.`);
+        setError(
+          `Insufficient cash. Customer still needs ${formatTZS(
+            total - cashAmount
+          )}.`
+        );
+
         return;
       }
     }
@@ -913,7 +1128,10 @@ export default function CheckOut() {
     const userId = localStorage.getItem('userId');
 
     if (!userId) {
-      setError('User ID is missing. Please log in again.');
+      setError(
+        'User ID is missing. Please log in again.'
+      );
+
       return;
     }
 
@@ -924,19 +1142,46 @@ export default function CheckOut() {
     const now = new Date();
 
     const year = now.getFullYear();
-    const month = String(now.getMonth() + 1).padStart(2, '0');
-    const day = String(now.getDate()).padStart(2, '0');
 
-    const invoiceNumber = `INV-${year}${month}${day}-${Date.now().toString().slice(-6)}`;
+    const month = String(
+      now.getMonth() + 1
+    ).padStart(2, '0');
+
+    const day = String(
+      now.getDate()
+    ).padStart(2, '0');
+
+    const invoiceNumber =
+      `INV-${year}${month}${day}-${Date.now()
+        .toString()
+        .slice(-6)}`;
 
     // -------------------------------------------------------
     // BUILD SALE
+    // -------------------------------------------------------
+    //
+    // LOAN:
+    //
+    // total    = complete sale amount
+    // paidNow  = amount customer pays now
+    //
+    // Example:
+    //
+    // total    = 12,500
+    // paidNow  = 5,000
+    // balance  = 7,500
+    //
     // -------------------------------------------------------
 
     const sale = {
       invoiceNumber,
 
       customerName: customerName.trim() || null,
+
+      customerMobile:
+        paymentMethod === 'loan'
+          ? customerMobile.trim()
+          : null,
 
       userId,
 
@@ -948,9 +1193,27 @@ export default function CheckOut() {
 
       total: Number(total),
 
-      cashGiven: paymentMethod === 'cash' ? Number(cashAmount) : null,
+      // Cash only
+      cashGiven:
+        paymentMethod === 'cash'
+          ? Number(cashAmount)
+          : null,
 
-      changeAmount: paymentMethod === 'cash' ? Number(change) : 0,
+      changeAmount:
+        paymentMethod === 'cash'
+          ? Number(change)
+          : 0,
+
+      // Loan only
+      paidNow:
+        paymentMethod === 'loan'
+          ? Number(loanPaidAmount)
+          : null,
+
+      loanBalance:
+        paymentMethod === 'loan'
+          ? Number(loanBalance)
+          : 0,
 
       status: 'completed',
 
@@ -967,29 +1230,58 @@ export default function CheckOut() {
 
         unitPrice: Number(item.price),
 
-        costPrice: Number(item.costPrice) || 0,
+        costPrice:
+          Number(item.costPrice) || 0,
 
-        subtotal: Number(item.qty) * Number(item.price)
+        subtotal:
+          Number(item.qty) *
+          Number(item.price)
       }))
     };
 
-    console.log('SALE READY FOR CONFIRMATION:', sale);
+    console.log(
+      'SALE READY FOR CONFIRMATION:',
+      sale
+    );
 
     // -------------------------------------------------------
-    // IMPORTANT:
-    // DO NOT CALL registerSale() HERE.
-    //
-    // Store the sale temporarily and ask for confirmation.
+    // DO NOT CALL registerSale HERE.
     // -------------------------------------------------------
 
     setPendingSale(sale);
 
-    setSuccessMessage(
+    let confirmationMessage =
       `Please confirm this sale.\n\n` +
-        `Items: ${cartItems.reduce((sum, item) => sum + Number(item.qty), 0)}\n` +
-        `Invoice: ${invoiceNumber}\n` +
-        `Total: ${formatTZS(total)}` +
-        (paymentMethod === 'cash' ? `\nCash Given: ${formatTZS(cashAmount)}\nChange: ${formatTZS(change)}` : '')
+      `Items: ${cartItems.reduce(
+        (sum, item) =>
+          sum + Number(item.qty),
+        0
+      )}\n` +
+      `Invoice: ${invoiceNumber}\n` +
+      `Total: ${formatTZS(total)}`;
+
+    if (paymentMethod === 'cash') {
+      confirmationMessage +=
+        `\nCash Given: ${formatTZS(
+          cashAmount
+        )}` +
+        `\nChange: ${formatTZS(change)}`;
+    }
+
+    if (paymentMethod === 'loan') {
+      confirmationMessage +=
+        `\nCustomer: ${customerName.trim()}` +
+        `\nMobile: ${customerMobile.trim()}` +
+        `\nPaid Now: ${formatTZS(
+          loanPaidAmount
+        )}` +
+        `\nLoan Balance: ${formatTZS(
+          loanBalance
+        )}`;
+    }
+
+    setSuccessMessage(
+      confirmationMessage
     );
 
     setConfirmSaleDialogOpen(true);
@@ -1004,11 +1296,12 @@ export default function CheckOut() {
   };
 
   // =========================================================
-  // RENDER
+  // SUCCESS
   // =========================================================
 
   const handleSuccessCancel = () => {
     setSuccessDialogOpen(false);
+
     setSuccessMessage('');
 
     setTimeout(() => {
@@ -1016,50 +1309,106 @@ export default function CheckOut() {
     }, 300);
   };
 
+  // =========================================================
+  // CONFIRM SALE
+  // =========================================================
+
   const confirmSale = async () => {
     if (!pendingSale || saleLoading) {
       return;
     }
 
     setSaleLoading(true);
+
     setError('');
 
     try {
-      console.log('REGISTERING CONFIRMED SALE:', pendingSale);
+      console.log(
+        'REGISTERING CONFIRMED SALE:',
+        pendingSale
+      );
 
-      const response = await registerSale(pendingSale);
+      const response =
+        await registerSale(pendingSale);
 
-      console.log('REGISTER SALE RESPONSE:', response);
+      console.log(
+        'REGISTER SALE RESPONSE:',
+        response
+      );
 
       if (!response?.successful) {
-        throw new Error(response?.message || 'Failed to register sale.');
+        throw new Error(
+          response?.message ||
+            'Failed to register sale.'
+        );
       }
 
-      const registeredInvoice = response?.invoiceNumber || response?.data?.invoiceNumber || pendingSale.invoiceNumber;
+      const registeredInvoice =
+        response?.invoiceNumber ||
+        response?.data?.invoiceNumber ||
+        pendingSale.invoiceNumber;
 
-      let message = `Sale completed successfully.\n\n` + `Invoice: ${registeredInvoice}\n` + `Total: ${formatTZS(pendingSale.total)}`;
+      let message =
+        `Sale completed successfully.\n\n` +
+        `Invoice: ${registeredInvoice}\n` +
+        `Total: ${formatTZS(
+          pendingSale.total
+        )}`;
 
-      if (pendingSale.paymentMethod === 'cash') {
-        message += `\nCash Given: ${formatTZS(pendingSale.cashGiven)}` + `\nChange: ${formatTZS(pendingSale.changeAmount)}`;
+      if (
+        pendingSale.paymentMethod ===
+        'cash'
+      ) {
+        message +=
+          `\nCash Given: ${formatTZS(
+            pendingSale.cashGiven
+          )}` +
+          `\nChange: ${formatTZS(
+            pendingSale.changeAmount
+          )}`;
       }
 
-      // Close confirmation dialog
+      if (
+        pendingSale.paymentMethod ===
+        'loan'
+      ) {
+        message +=
+          `\nCustomer: ${pendingSale.customerName}` +
+          `\nMobile: ${pendingSale.customerMobile}` +
+          `\nPaid Now: ${formatTZS(
+            pendingSale.paidNow
+          )}` +
+          `\nLoan Balance: ${formatTZS(
+            pendingSale.loanBalance
+          )}`;
+      }
+
       setConfirmSaleDialogOpen(false);
 
-      // Show successful sale
       setSuccessMessage(message);
+
       setSuccessDialogOpen(true);
 
-      // Sale has now actually been sent successfully
       setPendingSale(null);
     } catch (saleError) {
-      console.error('Confirm sale error:', saleError);
+      console.error(
+        'Confirm sale error:',
+        saleError
+      );
 
-      setError(saleError?.message || saleError?.error || 'Failed to register sale. Please try again.');
+      setError(
+        saleError?.message ||
+          saleError?.error ||
+          'Failed to register sale. Please try again.'
+      );
     } finally {
       setSaleLoading(false);
     }
   };
+
+  // =========================================================
+  // RENDER
+  // =========================================================
 
   return (
     <MainCard title="POS Checkout">
@@ -1099,16 +1448,27 @@ export default function CheckOut() {
               }}
             >
               <Box>
-                <Typography variant="h6">Add Product</Typography>
+                <Typography variant="h6">
+                  Add Product
+                </Typography>
 
-                <Typography variant="body2" color="text.secondary">
-                  Search and select a product or scan a barcode.
+                <Typography
+                  variant="body2"
+                  color="text.secondary"
+                >
+                  Search and select a product or
+                  scan a barcode.
                 </Typography>
               </Box>
 
-              <Typography variant="body2" color="text.secondary">
+              <Typography
+                variant="body2"
+                color="text.secondary"
+              >
                 {products.length} product
-                {products.length === 1 ? '' : 's'}
+                {products.length === 1
+                  ? ''
+                  : 's'}
               </Typography>
             </Stack>
 
@@ -1132,7 +1492,9 @@ export default function CheckOut() {
                 label="Search Products"
                 placeholder="Search by product name, SKU or barcode"
                 value={productSearch}
-                onChange={handleProductSearchChange}
+                onChange={
+                  handleProductSearchChange
+                }
                 fullWidth
                 autoFocus
                 disabled={loadingProduct}
@@ -1183,10 +1545,13 @@ export default function CheckOut() {
                       }}
                     >
                       <Typography color="text.secondary">
-                        {productSearch.trim() ? 'Searching products...' : 'Loading products...'}
+                        {productSearch.trim()
+                          ? 'Searching products...'
+                          : 'Loading products...'}
                       </Typography>
                     </Box>
-                  ) : products.length === 0 ? (
+                  ) : products.length ===
+                    0 ? (
                     <Box
                       sx={{
                         py: 6,
@@ -1195,7 +1560,9 @@ export default function CheckOut() {
                       }}
                     >
                       <Typography color="text.secondary">
-                        {productSearch.trim() ? 'No matching products found.' : 'No products available.'}
+                        {productSearch.trim()
+                          ? 'No matching products found.'
+                          : 'No products available.'}
                       </Typography>
 
                       {productSearch.trim() && (
@@ -1205,11 +1572,13 @@ export default function CheckOut() {
                             mt: 1
                           }}
                           onClick={() =>
-                            handleProductSearchChange({
-                              target: {
-                                value: ''
+                            handleProductSearchChange(
+                              {
+                                target: {
+                                  value: ''
+                                }
                               }
-                            })
+                            )
                           }
                         >
                           Show All Products
@@ -1218,112 +1587,177 @@ export default function CheckOut() {
                     </Box>
                   ) : (
                     <List disablePadding>
-                      {products.map((product) => {
-                        const primaryBarcode = product.barcodes?.find((item) => item.isPrimary === true) || product.barcodes?.[0];
+                      {products.map(
+                        (product) => {
+                          const primaryBarcode =
+                            product.barcodes?.find(
+                              (item) =>
+                                item.isPrimary ===
+                                true
+                            ) ||
+                            product.barcodes?.[0];
 
-                        const price = Number(product.details?.sellingPrice || 0);
+                          const price = Number(
+                            product.details
+                              ?.sellingPrice ||
+                              0
+                          );
 
-                        const brand = product.brand?.name || '';
+                          const brand =
+                            product.brand
+                              ?.name || '';
 
-                        const category = product.category?.name || '';
+                          const category =
+                            product.category
+                              ?.name || '';
 
-                        return (
-                          <ListItem
-                            key={product.id}
-                            divider
-                            disableGutters
-                            onClick={() => handleProductSelect(product)}
-                            sx={{
-                              px: 2,
-                              py: 1.5,
-
-                              cursor: price > 0 ? 'pointer' : 'not-allowed',
-
-                              opacity: price > 0 ? 1 : 0.6,
-
-                              transition: 'background-color 0.15s',
-
-                              '&:hover':
-                                price > 0
-                                  ? {
-                                      backgroundColor: 'action.hover'
-                                    }
-                                  : {}
-                            }}
-                          >
-                            <Box
+                          return (
+                            <ListItem
+                              key={
+                                product.id
+                              }
+                              divider
+                              disableGutters
+                              onClick={() =>
+                                handleProductSelect(
+                                  product
+                                )
+                              }
                               sx={{
-                                flex: 1,
-                                minWidth: 0
+                                px: 2,
+                                py: 1.5,
+
+                                cursor:
+                                  price > 0
+                                    ? 'pointer'
+                                    : 'not-allowed',
+
+                                opacity:
+                                  price > 0
+                                    ? 1
+                                    : 0.6,
+
+                                transition:
+                                  'background-color 0.15s',
+
+                                '&:hover':
+                                  price > 0
+                                    ? {
+                                        backgroundColor:
+                                          'action.hover'
+                                      }
+                                    : {}
                               }}
                             >
-                              <Typography
-                                fontWeight="bold"
+                              <Box
                                 sx={{
-                                  wordBreak: 'break-word'
+                                  flex: 1,
+                                  minWidth: 0
                                 }}
                               >
-                                {product.itemName || product.productName || 'Unnamed Product'}
-                              </Typography>
-
-                              <Stack
-                                direction="row"
-                                spacing={1}
-                                flexWrap="wrap"
-                                sx={{
-                                  mt: 0.25
-                                }}
-                              >
-                                {brand && (
-                                  <Typography variant="body2" color="text.secondary">
-                                    {brand}
-                                  </Typography>
-                                )}
-
-                                {category && (
-                                  <Typography variant="body2" color="text.secondary">
-                                    • {category}
-                                  </Typography>
-                                )}
-                              </Stack>
-
-                              <Typography
-                                variant="caption"
-                                color="text.secondary"
-                                display="block"
-                                sx={{
-                                  mt: 0.5,
-                                  wordBreak: 'break-all'
-                                }}
-                              >
-                                SKU: {product.sku || '-'}
-                              </Typography>
-
-                              {primaryBarcode?.barcode && (
-                                <Typography variant="caption" color="text.secondary" display="block">
-                                  Barcode: {primaryBarcode.barcode}
+                                <Typography
+                                  fontWeight="bold"
+                                  sx={{
+                                    wordBreak:
+                                      'break-word'
+                                  }}
+                                >
+                                  {product.itemName ||
+                                    product.productName ||
+                                    'Unnamed Product'}
                                 </Typography>
-                              )}
-                            </Box>
 
-                            <Box
-                              sx={{
-                                ml: 2,
-                                textAlign: 'right',
-                                flexShrink: 0
-                              }}
-                            >
-                              <Typography fontWeight="bold" color={price > 0 ? 'primary' : 'error'}>
-                                {formatTZS(price)}
-                              </Typography>
+                                <Stack
+                                  direction="row"
+                                  spacing={1}
+                                  flexWrap="wrap"
+                                  sx={{
+                                    mt: 0.25
+                                  }}
+                                >
+                                  {brand && (
+                                    <Typography
+                                      variant="body2"
+                                      color="text.secondary"
+                                    >
+                                      {brand}
+                                    </Typography>
+                                  )}
 
-                              <Typography variant="caption" color="text.secondary">
-                                {price > 0 ? 'Tap to add' : 'No price'}
-                              </Typography>
-                            </Box>
-                          </ListItem>
-                        );
-                      })}
+                                  {category && (
+                                    <Typography
+                                      variant="body2"
+                                      color="text.secondary"
+                                    >
+                                      •{' '}
+                                      {category}
+                                    </Typography>
+                                  )}
+                                </Stack>
+
+                                <Typography
+                                  variant="caption"
+                                  color="text.secondary"
+                                  display="block"
+                                  sx={{
+                                    mt: 0.5,
+                                    wordBreak:
+                                      'break-all'
+                                  }}
+                                >
+                                  SKU:{' '}
+                                  {product.sku ||
+                                    '-'}
+                                </Typography>
+
+                                {primaryBarcode?.barcode && (
+                                  <Typography
+                                    variant="caption"
+                                    color="text.secondary"
+                                    display="block"
+                                  >
+                                    Barcode:{' '}
+                                    {
+                                      primaryBarcode.barcode
+                                    }
+                                  </Typography>
+                                )}
+                              </Box>
+
+                              <Box
+                                sx={{
+                                  ml: 2,
+                                  textAlign:
+                                    'right',
+                                  flexShrink: 0
+                                }}
+                              >
+                                <Typography
+                                  fontWeight="bold"
+                                  color={
+                                    price > 0
+                                      ? 'primary'
+                                      : 'error'
+                                  }
+                                >
+                                  {formatTZS(
+                                    price
+                                  )}
+                                </Typography>
+
+                                <Typography
+                                  variant="caption"
+                                  color="text.secondary"
+                                >
+                                  {price > 0
+                                    ? 'Tap to add'
+                                    : 'No price'}
+                                </Typography>
+                              </Box>
+                            </ListItem>
+                          );
+                        }
+                      )}
                     </List>
                   )}
                 </Box>
@@ -1335,8 +1769,13 @@ export default function CheckOut() {
                 variant="outlined"
                 size="large"
                 fullWidth
-                onClick={handleOpenScanner}
-                disabled={productsLoading || loadingProduct}
+                onClick={
+                  handleOpenScanner
+                }
+                disabled={
+                  productsLoading ||
+                  loadingProduct
+                }
                 sx={{
                   minHeight: 52
                 }}
@@ -1344,8 +1783,13 @@ export default function CheckOut() {
                 Scan Barcode
               </Button>
 
-              <Typography variant="caption" color="text.secondary" align="center">
-                Search by product name, SKU or barcode, or use the camera scanner.
+              <Typography
+                variant="caption"
+                color="text.secondary"
+                align="center"
+              >
+                Search by product name, SKU or
+                barcode, or use the camera scanner.
               </Typography>
             </Stack>
           </Box>
@@ -1365,10 +1809,16 @@ export default function CheckOut() {
               mb: 1
             }}
           >
-            <Typography variant="h6">Order Items</Typography>
+            <Typography variant="h6">
+              Order Items
+            </Typography>
 
             {cartItems.length > 0 && (
-              <Button color="error" size="small" onClick={clearCart}>
+              <Button
+                color="error"
+                size="small"
+                onClick={clearCart}
+              >
                 Clear Cart
               </Button>
             )}
@@ -1385,7 +1835,9 @@ export default function CheckOut() {
                 borderRadius: 2
               }}
             >
-              <Typography color="text.secondary">Cart is empty</Typography>
+              <Typography color="text.secondary">
+                Cart is empty
+              </Typography>
 
               <Typography
                 variant="body2"
@@ -1394,7 +1846,8 @@ export default function CheckOut() {
                   mt: 1
                 }}
               >
-                Select a product from the list or scan a barcode.
+                Select a product from the list or
+                scan a barcode.
               </Typography>
             </Box>
           ) : (
@@ -1413,35 +1866,48 @@ export default function CheckOut() {
                 >
                   <Box
                     sx={{
-                      flex: '1 1 180px',
+                      flex:
+                        '1 1 180px',
                       minWidth: 0
                     }}
                   >
                     <Typography
                       fontWeight="bold"
                       sx={{
-                        wordBreak: 'break-word'
+                        wordBreak:
+                          'break-word'
                       }}
                     >
                       {item.name}
                     </Typography>
 
                     {item.brand && (
-                      <Typography variant="body2" color="text.secondary">
+                      <Typography
+                        variant="body2"
+                        color="text.secondary"
+                      >
                         {item.brand}
                       </Typography>
                     )}
 
                     {item.variant && (
-                      <Typography variant="body2" color="text.secondary">
+                      <Typography
+                        variant="body2"
+                        color="text.secondary"
+                      >
                         {item.variant}
                       </Typography>
                     )}
 
                     {item.weight && (
-                      <Typography variant="body2" color="text.secondary">
+                      <Typography
+                        variant="body2"
+                        color="text.secondary"
+                      >
                         {item.weight}
-                        {item.unit ? ` / ${item.unit}` : ''}
+                        {item.unit
+                          ? ` / ${item.unit}`
+                          : ''}
                       </Typography>
                     )}
 
@@ -1450,35 +1916,60 @@ export default function CheckOut() {
                       color="text.secondary"
                       display="block"
                       sx={{
-                        wordBreak: 'break-all'
+                        wordBreak:
+                          'break-all'
                       }}
                     >
                       SKU: {item.sku}
                     </Typography>
 
                     {item.barcode ? (
-                      <Typography variant="caption" color="text.secondary" display="block">
-                        Barcode: {item.barcode}
+                      <Typography
+                        variant="caption"
+                        color="text.secondary"
+                        display="block"
+                      >
+                        Barcode:{' '}
+                        {item.barcode}
                       </Typography>
                     ) : (
-                      <Typography variant="caption" color="warning.main" display="block">
+                      <Typography
+                        variant="caption"
+                        color="warning.main"
+                        display="block"
+                      >
                         No barcode
                       </Typography>
                     )}
                   </Box>
 
                   <Box>
-                    <Typography variant="caption" color="text.secondary">
+                    <Typography
+                      variant="caption"
+                      color="text.secondary"
+                    >
                       Price
                     </Typography>
 
-                    <Typography fontWeight="bold">{formatTZS(item.price)}</Typography>
+                    <Typography fontWeight="bold">
+                      {formatTZS(
+                        item.price
+                      )}
+                    </Typography>
                   </Box>
 
-                  <Stack direction="row" alignItems="center" spacing={1}>
+                  <Stack
+                    direction="row"
+                    alignItems="center"
+                    spacing={1}
+                  >
                     <Button
                       variant="outlined"
-                      onClick={() => decreaseQuantity(item.id)}
+                      onClick={() =>
+                        decreaseQuantity(
+                          item.id
+                        )
+                      }
                       sx={{
                         minWidth: 40,
                         width: 40,
@@ -1493,7 +1984,8 @@ export default function CheckOut() {
                       fontWeight="bold"
                       sx={{
                         minWidth: 24,
-                        textAlign: 'center'
+                        textAlign:
+                          'center'
                       }}
                     >
                       {item.qty}
@@ -1501,7 +1993,11 @@ export default function CheckOut() {
 
                     <Button
                       variant="outlined"
-                      onClick={() => increaseQuantity(item.id)}
+                      onClick={() =>
+                        increaseQuantity(
+                          item.id
+                        )
+                      }
                       sx={{
                         minWidth: 40,
                         width: 40,
@@ -1516,15 +2012,29 @@ export default function CheckOut() {
                   <Box
                     sx={{
                       minWidth: 100,
-                      textAlign: 'right'
+                      textAlign:
+                        'right'
                     }}
                   >
-                    <Typography variant="caption" color="text.secondary">
+                    <Typography
+                      variant="caption"
+                      color="text.secondary"
+                    >
                       Total
                     </Typography>
 
-                    <Typography fontWeight="bold" color="primary">
-                      {formatTZS(Number(item.qty) * Number(item.price))}
+                    <Typography
+                      fontWeight="bold"
+                      color="primary"
+                    >
+                      {formatTZS(
+                        Number(
+                          item.qty
+                        ) *
+                          Number(
+                            item.price
+                          )
+                      )}
                     </Typography>
                   </Box>
 
@@ -1532,7 +2042,11 @@ export default function CheckOut() {
                     color="error"
                     variant="outlined"
                     size="small"
-                    onClick={() => removeItem(item.id)}
+                    onClick={() =>
+                      removeItem(
+                        item.id
+                      )
+                    }
                     sx={{
                       width: {
                         xs: '100%',
@@ -1567,21 +2081,129 @@ export default function CheckOut() {
               borderRadius: 2
             }}
           >
-            <Typography variant="h6" gutterBottom>
+            <Typography
+              variant="h6"
+              gutterBottom
+            >
               Payment Summary
             </Typography>
 
             <Stack spacing={2}>
-              <TextField label="Customer Name" value={customerName} onChange={(event) => setCustomerName(event.target.value)} fullWidth />
+              {/* =================================================
+                  CUSTOMER
+              ================================================= */}
 
-              {paymentMethod === 'cash' && (
+              <TextField
+                label={
+                  paymentMethod === 'loan'
+                    ? 'Customer Full Name'
+                    : 'Customer Name'
+                }
+                value={customerName}
+                onChange={(event) => {
+                  setCustomerName(
+                    event.target.value
+                  );
+
+                  setError('');
+                }}
+                fullWidth
+                required={
+                  paymentMethod ===
+                  'loan'
+                }
+                error={
+                  loanCustomerNameMissing
+                }
+                helperText={
+                  loanCustomerNameMissing
+                    ? 'Full name is required for loan sales.'
+                    : ''
+                }
+              />
+
+              {paymentMethod === 'loan' && (
+                <TextField
+                  label="Customer Mobile Number"
+                  value={
+                    customerMobile
+                  }
+                  onChange={(event) => {
+                    setCustomerMobile(
+                      event.target.value
+                    );
+
+                    setError('');
+                  }}
+                  fullWidth
+                  required
+                  type="tel"
+                  placeholder="+255712345678"
+                  inputProps={{
+                    inputMode:
+                      'tel'
+                  }}
+                  error={
+                    loanCustomerMobileMissing
+                  }
+                  helperText={
+                    loanCustomerMobileMissing
+                      ? 'Mobile number is required for loan sales.'
+                      : 'Required for loan customer records.'
+                  }
+                />
+              )}
+
+              {/* =================================================
+                  PAYMENT METHOD
+              ================================================= */}
+
+              <Select
+                value={
+                  paymentMethod
+                }
+                onChange={
+                  handlePaymentMethodChange
+                }
+                fullWidth
+              >
+                <MenuItem value="cash">
+                  Cash
+                </MenuItem>
+
+                <MenuItem value="card">
+                  Card
+                </MenuItem>
+
+                <MenuItem value="mobile">
+                  Mobile Money
+                </MenuItem>
+
+                <MenuItem value="loan">
+                  Loan
+                </MenuItem>
+              </Select>
+
+              {/* =================================================
+                  CASH PAYMENT
+              ================================================= */}
+
+              {paymentMethod ===
+                'cash' && (
                 <>
                   <TextField
                     label="Cash Given"
                     type="number"
-                    value={cashGiven}
-                    onChange={(event) => {
-                      setCashGiven(event.target.value);
+                    value={
+                      cashGiven
+                    }
+                    onChange={(
+                      event
+                    ) => {
+                      setCashGiven(
+                        event.target
+                          .value
+                      );
 
                       setError('');
                     }}
@@ -1592,24 +2214,51 @@ export default function CheckOut() {
                       step: 500
                     }}
                     placeholder="Enter cash received"
-                    error={insufficientCash}
-                    helperText={insufficientCash ? `Need ${formatTZS(total - cashAmount)} more` : 'Required before completing a cash sale'}
+                    error={
+                      insufficientCash
+                    }
+                    helperText={
+                      insufficientCash
+                        ? `Need ${formatTZS(
+                            total -
+                              cashAmount
+                          )} more`
+                        : 'Required before completing a cash sale'
+                    }
                   />
 
-                  {cashGiven !== '' && (
+                  {cashGiven !==
+                    '' && (
                     <Box
                       sx={{
                         p: 2,
                         borderRadius: 2,
-                        backgroundColor: insufficientCash ? 'error.lighter' : 'success.lighter',
-                        border: '1px solid',
-                        borderColor: insufficientCash ? 'error.main' : 'success.main'
+                        backgroundColor:
+                          insufficientCash
+                            ? 'error.lighter'
+                            : 'success.lighter',
+                        border:
+                          '1px solid',
+                        borderColor:
+                          insufficientCash
+                            ? 'error.main'
+                            : 'success.main'
                       }}
                     >
-                      <Box display="flex" justifyContent="space-between" gap={2}>
-                        <Typography>Cash Given</Typography>
+                      <Box
+                        display="flex"
+                        justifyContent="space-between"
+                        gap={2}
+                      >
+                        <Typography>
+                          Cash Given
+                        </Typography>
 
-                        <Typography fontWeight="bold">{formatTZS(cashAmount)}</Typography>
+                        <Typography fontWeight="bold">
+                          {formatTZS(
+                            cashAmount
+                          )}
+                        </Typography>
                       </Box>
 
                       <Box
@@ -1620,80 +2269,403 @@ export default function CheckOut() {
                           mt: 1
                         }}
                       >
-                        <Typography fontWeight="bold">{insufficientCash ? 'Remaining' : 'Change'}</Typography>
+                        <Typography fontWeight="bold">
+                          {insufficientCash
+                            ? 'Remaining'
+                            : 'Change'}
+                        </Typography>
 
-                        <Typography variant="h6" fontWeight="bold" color={insufficientCash ? 'error' : 'success.main'}>
-                          {formatTZS(insufficientCash ? total - cashAmount : change)}
+                        <Typography
+                          variant="h6"
+                          fontWeight="bold"
+                          color={
+                            insufficientCash
+                              ? 'error'
+                              : 'success.main'
+                          }
+                        >
+                          {formatTZS(
+                            insufficientCash
+                              ? total -
+                                  cashAmount
+                              : change
+                          )}
                         </Typography>
                       </Box>
                     </Box>
                   )}
                 </>
               )}
-              <Select
-                value={paymentMethod}
-                onChange={(event) => {
-                  const method = event.target.value;
 
-                  setPaymentMethod(method);
+              {/* =================================================
+                  LOAN PAYMENT
+              ================================================= */}
 
-                  setError('');
+              {paymentMethod ===
+                'loan' && (
+                <>
+                  <Box
+                    sx={{
+                      p: 2,
+                      borderRadius: 2,
+                      backgroundColor:
+                        'warning.lighter',
+                      border:
+                        '1px solid',
+                      borderColor:
+                        'warning.main'
+                    }}
+                  >
+                    <Typography
+                      variant="body2"
+                      color="text.secondary"
+                      sx={{
+                        mb: 0.5
+                      }}
+                    >
+                      Full Sale Amount
+                    </Typography>
 
-                  if (method !== 'cash') {
-                    setCashGiven('');
-                  }
-                }}
-                fullWidth
+                    <Typography
+                      variant="h5"
+                      fontWeight="bold"
+                    >
+                      {formatTZS(
+                        total
+                      )}
+                    </Typography>
+
+                    <Typography
+                      variant="caption"
+                      color="text.secondary"
+                    >
+                      This is the total cost of
+                      the sale. Only "Paid Now"
+                      can be changed.
+                    </Typography>
+                  </Box>
+
+                  <TextField
+                    label="Paid Now"
+                    type="number"
+                    value={paidNow}
+                    onChange={(
+                      event
+                    ) => {
+                      setPaidNow(
+                        event.target
+                          .value
+                      );
+
+                      setError('');
+                    }}
+                    fullWidth
+                    required
+                    inputProps={{
+                      min: 0,
+                      max: total,
+                      step: 500
+                    }}
+                    placeholder="Enter amount paid now"
+                    error={
+                      invalidLoanPaidNow
+                    }
+                    helperText={
+                      invalidLoanPaidNow
+                        ? `Paid now must be between 0 and ${formatTZS(
+                            total
+                          )}.`
+                        : 'Defaults to the full total. Reduce it only for a partial loan.'
+                    }
+                  />
+
+                  {paidNow !==
+                    '' && (
+                    <Box
+                      sx={{
+                        p: 2,
+                        borderRadius: 2,
+                        backgroundColor:
+                          loanBalance >
+                          0
+                            ? 'warning.lighter'
+                            : 'success.lighter',
+                        border:
+                          '1px solid',
+                        borderColor:
+                          loanBalance >
+                          0
+                            ? 'warning.main'
+                            : 'success.main'
+                      }}
+                    >
+                      <Box
+                        display="flex"
+                        justifyContent="space-between"
+                        gap={2}
+                      >
+                        <Typography>
+                          Paid Now
+                        </Typography>
+
+                        <Typography fontWeight="bold">
+                          {formatTZS(
+                            loanPaidAmount
+                          )}
+                        </Typography>
+                      </Box>
+
+                      <Box
+                        display="flex"
+                        justifyContent="space-between"
+                        gap={2}
+                        sx={{
+                          mt: 1
+                        }}
+                      >
+                        <Typography fontWeight="bold">
+                          Loan Balance
+                        </Typography>
+
+                        <Typography
+                          variant="h6"
+                          fontWeight="bold"
+                          color={
+                            loanBalance >
+                            0
+                              ? 'warning.dark'
+                              : 'success.main'
+                          }
+                        >
+                          {formatTZS(
+                            loanBalance
+                          )}
+                        </Typography>
+                      </Box>
+
+                      {fullLoanPaid && (
+                        <Typography
+                          variant="caption"
+                          color="success.dark"
+                          display="block"
+                          sx={{
+                            mt: 1
+                          }}
+                        >
+                          Fully paid — no outstanding
+                          loan balance.
+                        </Typography>
+                      )}
+
+                      {partialLoan && (
+                        <Typography
+                          variant="caption"
+                          color="warning.dark"
+                          display="block"
+                          sx={{
+                            mt: 1
+                          }}
+                        >
+                          Partial payment — the
+                          remaining amount will be
+                          recorded as a loan balance.
+                        </Typography>
+                      )}
+
+                      {unpaidLoan && (
+                        <Typography
+                          variant="caption"
+                          color="warning.dark"
+                          display="block"
+                          sx={{
+                            mt: 1
+                          }}
+                        >
+                          No payment received now —
+                          the full amount remains as
+                          a loan.
+                        </Typography>
+                      )}
+                    </Box>
+                  )}
+                </>
+              )}
+
+              <Divider />
+
+              {/* =================================================
+                  TOTALS
+              ================================================= */}
+
+              <Box
+                display="flex"
+                justifyContent="space-between"
+                gap={2}
               >
-                <MenuItem value="cash">Cash</MenuItem>
+                <Typography>
+                  Subtotal
+                </Typography>
 
-                <MenuItem value="card">Card</MenuItem>
-
-                <MenuItem value="mobile">Mobile Money</MenuItem>
-              </Select>
-              <Divider />
-
-              <Box display="flex" justifyContent="space-between" gap={2}>
-                <Typography>Subtotal</Typography>
-
-                <Typography>{formatTZS(subtotal)}</Typography>
+                <Typography>
+                  {formatTZS(
+                    subtotal
+                  )}
+                </Typography>
               </Box>
 
-              <Box display="flex" justifyContent="space-between" gap={2}>
-                <Typography>Tax</Typography>
+              <Box
+                display="flex"
+                justifyContent="space-between"
+                gap={2}
+              >
+                <Typography>
+                  Tax
+                </Typography>
 
-                <Typography>{formatTZS(tax)}</Typography>
+                <Typography>
+                  {formatTZS(tax)}
+                </Typography>
               </Box>
 
               <Divider />
 
-              <Box display="flex" justifyContent="space-between" alignItems="center" gap={2}>
-                <Typography variant="h6">Total</Typography>
+              <Box
+                display="flex"
+                justifyContent="space-between"
+                alignItems="center"
+                gap={2}
+              >
+                <Typography variant="h6">
+                  Total
+                </Typography>
 
-                <Typography variant="h6" color="primary">
+                <Typography
+                  variant="h6"
+                  color="primary"
+                >
                   {formatTZS(total)}
                 </Typography>
               </Box>
+
+              {/* =================================================
+                  LOAN SUMMARY
+              ================================================= */}
+
+              {paymentMethod ===
+                'loan' && (
+                <Box
+                  sx={{
+                    p: 2,
+                    borderRadius: 2,
+                    backgroundColor:
+                      'background.default',
+                    border:
+                      '1px solid',
+                    borderColor:
+                      'divider'
+                  }}
+                >
+                  <Box
+                    display="flex"
+                    justifyContent="space-between"
+                    gap={2}
+                  >
+                    <Typography>
+                      Paid Now
+                    </Typography>
+
+                    <Typography fontWeight="bold">
+                      {formatTZS(
+                        loanPaidAmount
+                      )}
+                    </Typography>
+                  </Box>
+
+                  <Box
+                    display="flex"
+                    justifyContent="space-between"
+                    gap={2}
+                    sx={{
+                      mt: 1
+                    }}
+                  >
+                    <Typography fontWeight="bold">
+                      Outstanding Loan
+                    </Typography>
+
+                    <Typography
+                      fontWeight="bold"
+                      color={
+                        loanBalance >
+                        0
+                          ? 'warning.main'
+                          : 'success.main'
+                      }
+                    >
+                      {formatTZS(
+                        loanBalance
+                      )}
+                    </Typography>
+                  </Box>
+                </Box>
+              )}
+
+              {/* =================================================
+                  COMPLETE SALE
+              ================================================= */}
 
               <Button
                 variant="contained"
                 size="large"
                 fullWidth
-                onClick={completeSale}
-                disabled={saleLoading || cartItems.length === 0 || (paymentMethod === 'cash' && (cashGiven === '' || cashAmount < total))}
+                onClick={
+                  completeSale
+                }
+                disabled={
+                  saleLoading ||
+                  cartItems.length ===
+                    0 ||
+                  (
+                    paymentMethod ===
+                    'cash' &&
+                    (
+                      cashGiven ===
+                        '' ||
+                      cashAmount <
+                        total
+                    )
+                  ) ||
+                  (
+                    paymentMethod ===
+                    'loan' &&
+                    (
+                      !customerName.trim() ||
+                      !customerMobile.trim() ||
+                      paidNow === '' ||
+                      invalidLoanPaidNow
+                    )
+                  )
+                }
                 sx={{
                   minHeight: 52
                 }}
               >
-                {saleLoading ? 'Registering Sale...' : 'Complete Sale'}
+                {saleLoading
+                  ? 'Registering Sale...'
+                  : 'Complete Sale'}
               </Button>
 
               <Button
                 variant="outlined"
                 size="large"
                 fullWidth
-                onClick={printReceipt}
-                disabled={cartItems.length === 0}
+                onClick={
+                  printReceipt
+                }
+                disabled={
+                  cartItems.length ===
+                  0
+                }
                 sx={{
                   minHeight: 52
                 }}
@@ -1709,8 +2681,18 @@ export default function CheckOut() {
           SCANNER DIALOG
       ===================================================== */}
 
-      <Dialog open={scannerOpen} onClose={handleCloseScanner} fullWidth maxWidth="sm" fullScreen>
-        <DialogTitle>Scan Product Barcode</DialogTitle>
+      <Dialog
+        open={scannerOpen}
+        onClose={
+          handleCloseScanner
+        }
+        fullWidth
+        maxWidth="sm"
+        fullScreen
+      >
+        <DialogTitle>
+          Scan Product Barcode
+        </DialogTitle>
 
         <DialogContent
           sx={{
@@ -1751,9 +2733,11 @@ export default function CheckOut() {
               position: 'relative',
 
               '& video': {
-                width: '100% !important',
+                width:
+                  '100% !important',
 
-                height: '100% !important',
+                height:
+                  '100% !important',
 
                 objectFit: 'cover',
 
@@ -1765,7 +2749,8 @@ export default function CheckOut() {
               },
 
               '& #qr-shaded-region': {
-                border: '3px solid #fff !important'
+                border:
+                  '3px solid #fff !important'
               }
             }}
           >
@@ -1780,7 +2765,8 @@ export default function CheckOut() {
             {scannerLoading && (
               <Box
                 sx={{
-                  position: 'absolute',
+                  position:
+                    'absolute',
 
                   top: 0,
                   left: 0,
@@ -1789,16 +2775,22 @@ export default function CheckOut() {
 
                   display: 'flex',
 
-                  alignItems: 'center',
+                  alignItems:
+                    'center',
 
-                  justifyContent: 'center',
+                  justifyContent:
+                    'center',
 
-                  backgroundColor: 'rgba(0,0,0,0.35)',
+                  backgroundColor:
+                    'rgba(0,0,0,0.35)',
 
                   zIndex: 10
                 }}
               >
-                <Typography color="white" fontWeight="bold">
+                <Typography
+                  color="white"
+                  fontWeight="bold"
+                >
                   Starting camera...
                 </Typography>
               </Box>
@@ -1812,7 +2804,8 @@ export default function CheckOut() {
               mt: 2
             }}
           >
-            Point the rear camera at the barcode.
+            Point the rear camera at the
+            barcode.
           </Typography>
 
           <Typography
@@ -1823,7 +2816,8 @@ export default function CheckOut() {
               mt: 1
             }}
           >
-            Keep the barcode inside the white scanning area.
+            Keep the barcode inside the white
+            scanning area.
           </Typography>
         </DialogContent>
 
@@ -1837,7 +2831,9 @@ export default function CheckOut() {
             color="error"
             fullWidth
             size="large"
-            onClick={handleCloseScanner}
+            onClick={
+              handleCloseScanner
+            }
             sx={{
               minHeight: 52
             }}
@@ -1847,37 +2843,74 @@ export default function CheckOut() {
         </DialogActions>
       </Dialog>
 
+      {/* =====================================================
+          CONFIRM SALE DIALOG
+      ===================================================== */}
+
       <Dialog
-        open={confirmSaleDialogOpen}
+        open={
+          confirmSaleDialogOpen
+        }
         onClose={() => {
           if (!saleLoading) {
-            setConfirmSaleDialogOpen(false);
+            setConfirmSaleDialogOpen(
+              false
+            );
+
             setPendingSale(null);
+
             setSuccessMessage('');
           }
         }}
         fullWidth
         maxWidth="xs"
       >
-        <DialogTitle>Confirm Sale</DialogTitle>
+        <DialogTitle>
+          Confirm Sale
+        </DialogTitle>
 
         <DialogContent>
           <Typography
             sx={{
-              whiteSpace: 'pre-line'
+              whiteSpace:
+                'pre-line'
             }}
           >
             {successMessage}
           </Typography>
 
-          <Alert
-            severity="warning"
-            sx={{
-              mt: 2
-            }}
-          >
-            Please review the sale details before confirming. The sale will be recorded once you press “Confirm Sale.”
-          </Alert>
+          {pendingSale?.paymentMethod ===
+            'loan' && (
+            <Alert
+              severity="warning"
+              sx={{
+                mt: 2
+              }}
+            >
+              This is a loan sale. The outstanding
+              balance of{' '}
+              <strong>
+                {formatTZS(
+                  pendingSale.loanBalance
+                )}
+              </strong>{' '}
+              will remain as the customer's loan.
+            </Alert>
+          )}
+
+          {pendingSale?.paymentMethod !==
+            'loan' && (
+            <Alert
+              severity="warning"
+              sx={{
+                mt: 2
+              }}
+            >
+              Please review the sale details before
+              confirming. The sale will be recorded
+              once you press “Confirm Sale.”
+            </Alert>
+          )}
         </DialogContent>
 
         <DialogActions
@@ -1891,14 +2924,16 @@ export default function CheckOut() {
             color="error"
             fullWidth
             size="large"
-            disabled={saleLoading}
+            disabled={
+              saleLoading
+            }
             onClick={() => {
-              // ---------------------------------------------------
-              // CANCEL = DO NOT SEND ANYTHING TO BACKEND
-              // ---------------------------------------------------
+              setConfirmSaleDialogOpen(
+                false
+              );
 
-              setConfirmSaleDialogOpen(false);
               setPendingSale(null);
+
               setSuccessMessage('');
             }}
             sx={{
@@ -1912,31 +2947,51 @@ export default function CheckOut() {
             variant="contained"
             fullWidth
             size="large"
-            disabled={saleLoading || !pendingSale}
-            onClick={confirmSale}
+            disabled={
+              saleLoading ||
+              !pendingSale
+            }
+            onClick={
+              confirmSale
+            }
             sx={{
               minHeight: 52
             }}
           >
-            {saleLoading ? 'Registering...' : 'Confirm Sale'}
+            {saleLoading
+              ? 'Registering...'
+              : 'Confirm Sale'}
           </Button>
         </DialogActions>
       </Dialog>
+
+      {/* =====================================================
+          SUCCESS DIALOG
+      ===================================================== */}
+
       <Dialog
-        open={successDialogOpen}
+        open={
+          successDialogOpen
+        }
         onClose={() => {
-          setSuccessDialogOpen(false);
+          setSuccessDialogOpen(
+            false
+          );
+
           setSuccessMessage('');
         }}
         fullWidth
         maxWidth="xs"
       >
-        <DialogTitle>Sale Completed</DialogTitle>
+        <DialogTitle>
+          Sale Completed
+        </DialogTitle>
 
         <DialogContent>
           <Typography
             sx={{
-              whiteSpace: 'pre-line'
+              whiteSpace:
+                'pre-line'
             }}
           >
             {successMessage}
@@ -1953,7 +3008,10 @@ export default function CheckOut() {
             fullWidth
             size="large"
             onClick={() => {
-              setSuccessDialogOpen(false);
+              setSuccessDialogOpen(
+                false
+              );
+
               setSuccessMessage('');
 
               clearCart();
