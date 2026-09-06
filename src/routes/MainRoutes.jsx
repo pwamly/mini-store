@@ -20,6 +20,8 @@ const ItemRegistration = Loadable(lazy(() => import('pages/products/ItemRegistra
 
 const Products = Loadable(lazy(() => import('pages/products/GetProducts')));
 
+const LoanPayments = Loadable(lazy(() => import('pages/loans/LoanPayments')));
+
 const NotFound = Loadable(lazy(() => import('pages/NotFound')));
 
 const MainRoutes = {
@@ -74,6 +76,10 @@ const MainRoutes = {
         {
           path: 'products',
           element: <Products />
+        },
+        {
+          path: 'loan-payments',
+          element: <LoanPayments />
         },
         {
           path: '*',

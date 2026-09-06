@@ -53,7 +53,7 @@ export default function AuthLogin({ isDemo = false }) {
       })}
       onSubmit={async (values, { setSubmitting, setErrors }) => {
         try {
-          const response = await fetch('https://192.168.1.173:5000/auth/login', {
+          const response = await fetch('/auth/login', {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json'
