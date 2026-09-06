@@ -4,37 +4,23 @@ import Loadable from 'components/Loadable';
 import DashboardLayout from 'layout/Dashboard';
 import ProtectedRoute from '../ProtectedRoute';
 
-const DashboardDefault = Loadable(
-  lazy(() => import('pages/dashboard/default'))
-);
+const DashboardDefault = Loadable(lazy(() => import('pages/dashboard/default')));
 
-const Color = Loadable(
-  lazy(() => import('pages/component-overview/color'))
-);
+const Color = Loadable(lazy(() => import('pages/component-overview/color')));
 
-const Typography = Loadable(
-  lazy(() => import('pages/component-overview/typography'))
-);
+const Typography = Loadable(lazy(() => import('pages/component-overview/typography')));
 
-const Shadow = Loadable(
-  lazy(() => import('pages/component-overview/shadows'))
-);
+const Shadow = Loadable(lazy(() => import('pages/component-overview/shadows')));
 
-const CheckOut = Loadable(
-  lazy(() => import('pages/sales/checkOut'))
-);
+const CheckOut = Loadable(lazy(() => import('pages/sales/checkOut')));
 
-const Sales = Loadable(
-  lazy(() => import('pages/sales/Sales'))
-);
+const Sales = Loadable(lazy(() => import('pages/sales/Sales')));
 
-const ItemRegistration = Loadable(
-  lazy(() => import('pages/products/ItemRegistration'))
-);
+const ItemRegistration = Loadable(lazy(() => import('pages/products/ItemRegistration')));
 
-const Products = Loadable(
-  lazy(() => import('pages/products/GetProducts'))
-);
+const Products = Loadable(lazy(() => import('pages/products/GetProducts')));
+
+const NotFound = Loadable(lazy(() => import('pages/NotFound')));
 
 const MainRoutes = {
   path: '/',
@@ -88,6 +74,10 @@ const MainRoutes = {
         {
           path: 'products',
           element: <Products />
+        },
+        {
+          path: '*',
+          element: <NotFound />
         }
       ]
     }

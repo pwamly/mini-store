@@ -36,6 +36,22 @@ import { getSales } from 'api/salesApi';
 
 export default function Sales() {
   // =========================================================
+  // TODAY
+  // =========================================================
+
+  const getToday = () => {
+    const today = new Date();
+
+    const year = today.getFullYear();
+    const month = String(today.getMonth() + 1).padStart(2, '0');
+    const day = String(today.getDate()).padStart(2, '0');
+
+    return `${year}-${month}-${day}`;
+  };
+
+  const today = getToday();
+
+  // =========================================================
   // STATE
   // =========================================================
 
@@ -54,13 +70,15 @@ export default function Sales() {
 
   const [search, setSearch] = useState('');
 
-  const [startDate, setStartDate] = useState('');
+  // Default = today's date
+  const [startDate, setStartDate] = useState(today);
 
-  const [endDate, setEndDate] = useState('');
+  const [endDate, setEndDate] = useState(today);
 
   const [page, setPage] = useState(1);
 
-  const [limit, setLimit] = useState(20);
+  // Default = 500 transactions
+  const [limit, setLimit] = useState(500);
 
   const [totalPages, setTotalPages] = useState(1);
 
@@ -111,13 +129,45 @@ export default function Sales() {
     setError('');
 
     try {
+      const currentPage = overrides.page ?? page;
+      const currentLimit = overrides.limit ?? limit;
+
+      const currentSearch =
+        overrides.search !== undefined
+          ? overrides.search
+          : search.trim();
+
+      const currentStartDate =
+        overrides.startDate !== undefined
+          ? overrides.startDate
+          : startDate;
+
+      const currentEndDate =
+        overrides.endDate !== undefined
+          ? overrides.endDate
+          : endDate;
+
+      // =====================================================
+      // BUILD PARAMS
+      // Only include fields that actually have values.
+      // =====================================================
+
       const params = {
-        page: overrides.page ?? page,
-        limit: overrides.limit ?? limit,
-        search: overrides.search !== undefined ? overrides.search : search.trim() || undefined,
-        startDate: overrides.startDate !== undefined ? overrides.startDate : startDate || undefined,
-        endDate: overrides.endDate !== undefined ? overrides.endDate : endDate || undefined
+        page: currentPage,
+        limit: currentLimit
       };
+
+      if (currentSearch) {
+        params.search = currentSearch;
+      }
+
+      if (currentStartDate) {
+        params.startDate = currentStartDate;
+      }
+
+      if (currentEndDate) {
+        params.endDate = currentEndDate;
+      }
 
       console.log('GET SALES PARAMS:', params);
 
@@ -126,21 +176,48 @@ export default function Sales() {
       console.log('GET SALES RESPONSE:', response);
 
       if (!response?.successful) {
-        throw new Error(response?.message || 'Unable to load sales.');
+        throw new Error(
+          response?.message || 'Unable to load sales.'
+        );
       }
 
-      setSales(Array.isArray(response.data) ? response.data : []);
+      setSales(
+        Array.isArray(response.data)
+          ? response.data
+          : []
+      );
 
       setSummary({
-        transactions: Number(response.summary?.transactions || 0),
-        sales: Number(response.summary?.sales || 0),
-        profit: Number(response.summary?.profit || 0),
-        items: Number(response.summary?.items || 0)
+        transactions: Number(
+          response.summary?.transactions || 0
+        ),
+
+        sales: Number(
+          response.summary?.sales || 0
+        ),
+
+        profit: Number(
+          response.summary?.profit || 0
+        ),
+
+        items: Number(
+          response.summary?.items || 0
+        )
       });
 
-      setTotalPages(Math.max(Number(response.pagination?.totalPages || 1), 1));
+      setTotalPages(
+        Math.max(
+          Number(
+            response.pagination?.totalPages || 1
+          ),
+          1
+        )
+      );
     } catch (err) {
-      console.error('Load sales error:', err);
+      console.error(
+        'Load sales error:',
+        err
+      );
 
       setSales([]);
 
@@ -164,7 +241,11 @@ export default function Sales() {
   };
 
   // =========================================================
-  // INITIAL LOAD + PAGE/LIMIT/DATE CHANGES
+  // INITIAL LOAD
+  //
+  // Default:
+  // today
+  // 500 transactions
   // =========================================================
 
   useEffect(() => {
@@ -186,7 +267,7 @@ export default function Sales() {
 
     loadSales({
       page: 1,
-      search: trimmedSearch || undefined
+      search: trimmedSearch
     });
   };
 
@@ -198,12 +279,17 @@ export default function Sales() {
 
   // =========================================================
   // CLEAR FILTERS
+  //
+  // Reset to:
+  // Today's sales
+  // 500 transactions
   // =========================================================
 
   const clearFilters = () => {
     setSearch('');
-    setStartDate('');
-    setEndDate('');
+    setStartDate(today);
+    setEndDate(today);
+    setLimit(500);
 
     if (page !== 1) {
       setPage(1);
@@ -213,9 +299,10 @@ export default function Sales() {
 
     loadSales({
       page: 1,
-      search: undefined,
-      startDate: undefined,
-      endDate: undefined
+      limit: 500,
+      search: '',
+      startDate: today,
+      endDate: today
     });
   };
 
@@ -309,8 +396,13 @@ export default function Sales() {
   // =========================================================
 
   const getItemQuantity = (sale) => {
-    if (sale?.totalQuantity !== undefined && sale?.totalQuantity !== null) {
-      return Number(sale.totalQuantity) || 0;
+    if (
+      sale?.totalQuantity !== undefined &&
+      sale?.totalQuantity !== null
+    ) {
+      return Number(
+        sale.totalQuantity
+      ) || 0;
     }
 
     if (!Array.isArray(sale?.items)) {
@@ -318,7 +410,9 @@ export default function Sales() {
     }
 
     return sale.items.reduce(
-      (total, item) => total + (Number(item.quantity) || 0),
+      (total, item) =>
+        total +
+        (Number(item.quantity) || 0),
       0
     );
   };
@@ -348,7 +442,11 @@ export default function Sales() {
         sx={{ mb: 3 }}
       >
         <Box>
-          <Typography variant="h4" fontWeight={700}>
+
+          <Typography
+            variant="h4"
+            fontWeight={700}
+          >
             Sales
           </Typography>
 
@@ -357,8 +455,27 @@ export default function Sales() {
             color="text.secondary"
             sx={{ mt: 0.5 }}
           >
-            View and manage completed sales transactions.
+            View and manage sales transactions.
           </Typography>
+
+          {/* CURRENT FILTER */}
+
+          <Typography
+            variant="caption"
+            color="primary"
+            sx={{
+              display: 'block',
+              mt: 1,
+              fontWeight: 600
+            }}
+          >
+            Showing sales from{' '}
+            {startDate === endDate
+              ? startDate
+              : `${startDate} to ${endDate}`}
+            {' '}• {limit.toLocaleString()} per page
+          </Typography>
+
         </Box>
 
         <Button
@@ -379,6 +496,7 @@ export default function Sales() {
         >
           Refresh
         </Button>
+
       </Stack>
 
       {/* =====================================================
@@ -399,12 +517,25 @@ export default function Sales() {
           SUMMARY
       ===================================================== */}
 
-      <Grid container spacing={2} sx={{ mb: 3 }}>
+      <Grid
+        container
+        spacing={2}
+        sx={{ mb: 3 }}
+      >
 
-        <Grid item xs={12} sm={6} md={3}>
+        <Grid
+          item
+          xs={12}
+          sm={6}
+          md={3}
+        >
           <Card>
             <CardContent>
-              <Typography variant="body2" color="text.secondary">
+
+              <Typography
+                variant="body2"
+                color="text.secondary"
+              >
                 Transactions
               </Typography>
 
@@ -415,14 +546,24 @@ export default function Sales() {
               >
                 {summary.transactions.toLocaleString()}
               </Typography>
+
             </CardContent>
           </Card>
         </Grid>
 
-        <Grid item xs={12} sm={6} md={3}>
+        <Grid
+          item
+          xs={12}
+          sm={6}
+          md={3}
+        >
           <Card>
             <CardContent>
-              <Typography variant="body2" color="text.secondary">
+
+              <Typography
+                variant="body2"
+                color="text.secondary"
+              >
                 Total Sales
               </Typography>
 
@@ -434,14 +575,24 @@ export default function Sales() {
               >
                 {formatTZS(summary.sales)}
               </Typography>
+
             </CardContent>
           </Card>
         </Grid>
 
-        <Grid item xs={12} sm={6} md={3}>
+        <Grid
+          item
+          xs={12}
+          sm={6}
+          md={3}
+        >
           <Card>
             <CardContent>
-              <Typography variant="body2" color="text.secondary">
+
+              <Typography
+                variant="body2"
+                color="text.secondary"
+              >
                 Profit
               </Typography>
 
@@ -453,14 +604,24 @@ export default function Sales() {
               >
                 {formatTZS(summary.profit)}
               </Typography>
+
             </CardContent>
           </Card>
         </Grid>
 
-        <Grid item xs={12} sm={6} md={3}>
+        <Grid
+          item
+          xs={12}
+          sm={6}
+          md={3}
+        >
           <Card>
             <CardContent>
-              <Typography variant="body2" color="text.secondary">
+
+              <Typography
+                variant="body2"
+                color="text.secondary"
+              >
                 Items Sold
               </Typography>
 
@@ -471,6 +632,7 @@ export default function Sales() {
               >
                 {summary.items.toLocaleString()}
               </Typography>
+
             </CardContent>
           </Card>
         </Grid>
@@ -484,18 +646,33 @@ export default function Sales() {
       <Card sx={{ mb: 3 }}>
         <CardContent>
 
-          <Grid container spacing={2} alignItems="center">
+          <Grid
+            container
+            spacing={2}
+            alignItems="center"
+          >
 
             {/* SEARCH */}
 
-            <Grid item xs={12} md={5}>
+            <Grid
+              item
+              xs={12}
+              md={5}
+            >
+
               <TextField
                 fullWidth
                 label="Search Sales"
                 placeholder="Invoice, customer, SKU or barcode"
                 value={search}
-                onChange={(event) => setSearch(event.target.value)}
-                onKeyDown={handleSearchKeyDown}
+                onChange={(event) =>
+                  setSearch(
+                    event.target.value
+                  )
+                }
+                onKeyDown={
+                  handleSearchKeyDown
+                }
                 InputProps={{
                   startAdornment: (
                     <InputAdornment position="start">
@@ -513,70 +690,121 @@ export default function Sales() {
                   )
                 }}
               />
+
             </Grid>
 
             {/* START DATE */}
 
-            <Grid item xs={12} sm={6} md={2}>
+            <Grid
+              item
+              xs={12}
+              sm={6}
+              md={2}
+            >
+
               <TextField
                 fullWidth
                 type="date"
                 label="Start Date"
                 value={startDate}
                 onChange={(event) => {
-                  setStartDate(event.target.value);
+                  setStartDate(
+                    event.target.value
+                  );
+
                   setPage(1);
                 }}
                 InputLabelProps={{
                   shrink: true
                 }}
               />
+
             </Grid>
 
             {/* END DATE */}
 
-            <Grid item xs={12} sm={6} md={2}>
+            <Grid
+              item
+              xs={12}
+              sm={6}
+              md={2}
+            >
+
               <TextField
                 fullWidth
                 type="date"
                 label="End Date"
                 value={endDate}
                 onChange={(event) => {
-                  setEndDate(event.target.value);
+                  setEndDate(
+                    event.target.value
+                  );
+
                   setPage(1);
                 }}
                 InputLabelProps={{
                   shrink: true
                 }}
               />
+
             </Grid>
 
             {/* LIMIT */}
 
-            <Grid item xs={12} sm={6} md={1.5}>
+            <Grid
+              item
+              xs={12}
+              sm={6}
+              md={1.5}
+            >
+
               <Select
                 fullWidth
                 value={limit}
                 onChange={(event) => {
-                  setLimit(Number(event.target.value));
+                  setLimit(
+                    Number(
+                      event.target.value
+                    )
+                  );
+
                   setPage(1);
                 }}
               >
-                <MenuItem value={10}>10</MenuItem>
-                <MenuItem value={20}>20</MenuItem>
-                <MenuItem value={50}>50</MenuItem>
-                <MenuItem value={100}>100</MenuItem>
+
+                <MenuItem value={500}>
+                  500
+                </MenuItem>
+
+                <MenuItem value={1000}>
+                  1,000
+                </MenuItem>
+
+                <MenuItem value={2000}>
+                  2,000
+                </MenuItem>
+
               </Select>
+
             </Grid>
 
             {/* ACTIONS */}
 
-            <Grid item xs={12} sm={6} md={1.5}>
+            <Grid
+              item
+              xs={12}
+              sm={6}
+              md={1.5}
+            >
+
               <Stack
                 direction="row"
                 spacing={1}
-                sx={{ width: '100%' }}
+                sx={{
+                  width: '100%'
+                }}
               >
+
                 <Button
                   variant="contained"
                   fullWidth
@@ -593,7 +821,9 @@ export default function Sales() {
                 >
                   Clear
                 </Button>
+
               </Stack>
+
             </Grid>
 
           </Grid>
@@ -616,13 +846,19 @@ export default function Sales() {
             borderColor: 'divider'
           }}
         >
+
           <Stack
             direction="row"
             justifyContent="space-between"
             alignItems="center"
           >
+
             <Box>
-              <Typography variant="h6" fontWeight={600}>
+
+              <Typography
+                variant="h6"
+                fontWeight={600}
+              >
                 Sales Transactions
               </Typography>
 
@@ -630,15 +866,23 @@ export default function Sales() {
                 variant="body2"
                 color="text.secondary"
               >
-                {sales.length} transaction
-                {sales.length === 1 ? '' : 's'} shown
+                {sales.length.toLocaleString()}{' '}
+                transaction
+                {sales.length === 1
+                  ? ''
+                  : 's'} shown
               </Typography>
+
             </Box>
 
             {loading && (
-              <CircularProgress size={24} />
+              <CircularProgress
+                size={24}
+              />
             )}
+
           </Stack>
+
         </Box>
 
         {/* LOADING */}
@@ -651,6 +895,7 @@ export default function Sales() {
               textAlign: 'center'
             }}
           >
+
             <CircularProgress />
 
             <Typography
@@ -659,6 +904,7 @@ export default function Sales() {
             >
               Loading sales...
             </Typography>
+
           </Box>
 
         ) : sales.length === 0 ? (
@@ -674,6 +920,7 @@ export default function Sales() {
               textAlign: 'center'
             }}
           >
+
             <Box
               component="div"
               sx={{
@@ -696,8 +943,10 @@ export default function Sales() {
               color="text.secondary"
               sx={{ mt: 0.5 }}
             >
-              Try changing your search or date filters.
+              Try changing your search
+              or date filters.
             </Typography>
+
           </Box>
 
         ) : (
@@ -706,10 +955,20 @@ export default function Sales() {
              TABLE
           ================================================= */
 
-          <TableContainer sx={{ overflowX: 'auto' }}>
-            <Table sx={{ minWidth: 1000 }}>
+          <TableContainer
+            sx={{
+              overflowX: 'auto'
+            }}
+          >
+
+            <Table
+              sx={{
+                minWidth: 1000
+              }}
+            >
 
               <TableHead>
+
                 <TableRow>
 
                   <TableCell>
@@ -749,6 +1008,7 @@ export default function Sales() {
                   </TableCell>
 
                 </TableRow>
+
               </TableHead>
 
               <TableBody>
@@ -756,116 +1016,168 @@ export default function Sales() {
                 {sales.map((sale) => (
 
                   <TableRow
-                    key={sale.id || sale.invoiceNumber}
+                    key={
+                      sale.id ||
+                      sale.invoiceNumber
+                    }
                     hover
                   >
 
                     {/* INVOICE */}
 
                     <TableCell>
+
                       <Typography
                         fontWeight={700}
                         sx={{
-                          whiteSpace: 'nowrap'
+                          whiteSpace:
+                            'nowrap'
                         }}
                       >
-                        {sale.invoiceNumber || '-'}
+                        {sale.invoiceNumber ||
+                          '-'}
                       </Typography>
+
                     </TableCell>
 
                     {/* DATE */}
 
                     <TableCell>
+
                       <Typography
                         variant="body2"
                         sx={{
-                          whiteSpace: 'nowrap'
+                          whiteSpace:
+                            'nowrap'
                         }}
                       >
-                        {formatDateTime(sale.createdAt)}
+                        {formatDateTime(
+                          sale.createdAt
+                        )}
                       </Typography>
+
                     </TableCell>
 
                     {/* CUSTOMER */}
 
                     <TableCell>
+
                       {sale.customerName ? (
+
                         sale.customerName
+
                       ) : (
+
                         <Typography
                           variant="body2"
                           color="text.secondary"
                         >
                           Walk-in Customer
                         </Typography>
+
                       )}
+
                     </TableCell>
 
                     {/* ITEMS */}
 
                     <TableCell>
+
                       <Typography fontWeight={700}>
-                        {getItemQuantity(sale)}
+                        {getItemQuantity(
+                          sale
+                        )}
                       </Typography>
+
                     </TableCell>
 
                     {/* PAYMENT */}
 
                     <TableCell>
+
                       <Chip
                         size="small"
-                        label={paymentLabel(sale.paymentMethod)}
-                        color={paymentColor(sale.paymentMethod)}
+                        label={paymentLabel(
+                          sale.paymentMethod
+                        )}
+                        color={paymentColor(
+                          sale.paymentMethod
+                        )}
                       />
+
                     </TableCell>
 
                     {/* STATUS */}
 
                     <TableCell>
+
                       <Chip
                         size="small"
-                        label={sale.status || 'unknown'}
-                        color={statusColor(sale.status)}
+                        label={
+                          sale.status ||
+                          'unknown'
+                        }
+                        color={statusColor(
+                          sale.status
+                        )}
                       />
+
                     </TableCell>
 
                     {/* TOTAL */}
 
                     <TableCell align="right">
+
                       <Typography fontWeight={700}>
-                        {formatTZS(sale.total)}
+                        {formatTZS(
+                          sale.total
+                        )}
                       </Typography>
+
                     </TableCell>
 
                     {/* PROFIT */}
 
                     <TableCell align="right">
+
                       <Typography
                         fontWeight={700}
                         color="success.main"
                       >
-                        {formatTZS(sale.totalProfit)}
+                        {formatTZS(
+                          sale.totalProfit
+                        )}
                       </Typography>
+
                     </TableCell>
 
                     {/* ACTION */}
 
                     <TableCell align="center">
+
                       <IconButton
                         color="primary"
-                        onClick={() => handleViewSale(sale)}
+                        onClick={() =>
+                          handleViewSale(
+                            sale
+                          )
+                        }
                         title="View sale"
                       >
+
                         <Box
                           component="span"
                           sx={{
-                            fontSize: '1.25rem',
+                            fontSize:
+                              '1.25rem',
                             lineHeight: 1
                           }}
                         >
                           👁
                         </Box>
+
                       </IconButton>
+
                     </TableCell>
 
                   </TableRow>
@@ -875,6 +1187,7 @@ export default function Sales() {
               </TableBody>
 
             </Table>
+
           </TableContainer>
 
         )}
@@ -894,15 +1207,19 @@ export default function Sales() {
               justifyContent: 'center'
             }}
           >
+
             <Pagination
               count={totalPages}
               page={page}
-              onChange={(_, value) => setPage(value)}
+              onChange={(_, value) =>
+                setPage(value)
+              }
               color="primary"
               disabled={loading}
               showFirstButton
               showLastButton
             />
+
           </Box>
 
         )}
@@ -950,16 +1267,24 @@ export default function Sales() {
                 variant="body2"
                 color="text.secondary"
               >
-                {selectedSale?.invoiceNumber || '-'}
+                {selectedSale?.invoiceNumber ||
+                  '-'}
               </Typography>
 
             </Box>
 
             {selectedSale && (
+
               <Chip
-                label={selectedSale.status || 'unknown'}
-                color={statusColor(selectedSale.status)}
+                label={
+                  selectedSale.status ||
+                  'unknown'
+                }
+                color={statusColor(
+                  selectedSale.status
+                )}
               />
+
             )}
 
           </Stack>
@@ -978,9 +1303,16 @@ export default function Sales() {
                   SALE INFORMATION
               ============================================= */}
 
-              <Grid container spacing={2}>
+              <Grid
+                container
+                spacing={2}
+              >
 
-                <Grid item xs={12} sm={6}>
+                <Grid
+                  item
+                  xs={12}
+                  sm={6}
+                >
 
                   <Typography
                     variant="caption"
@@ -990,12 +1322,17 @@ export default function Sales() {
                   </Typography>
 
                   <Typography fontWeight={700}>
-                    {selectedSale.invoiceNumber || '-'}
+                    {selectedSale.invoiceNumber ||
+                      '-'}
                   </Typography>
 
                 </Grid>
 
-                <Grid item xs={12} sm={6}>
+                <Grid
+                  item
+                  xs={12}
+                  sm={6}
+                >
 
                   <Typography
                     variant="caption"
@@ -1005,12 +1342,18 @@ export default function Sales() {
                   </Typography>
 
                   <Typography fontWeight={700}>
-                    {formatDateTime(selectedSale.createdAt)}
+                    {formatDateTime(
+                      selectedSale.createdAt
+                    )}
                   </Typography>
 
                 </Grid>
 
-                <Grid item xs={12} sm={6}>
+                <Grid
+                  item
+                  xs={12}
+                  sm={6}
+                >
 
                   <Typography
                     variant="caption"
@@ -1020,12 +1363,17 @@ export default function Sales() {
                   </Typography>
 
                   <Typography fontWeight={700}>
-                    {selectedSale.customerName || 'Walk-in Customer'}
+                    {selectedSale.customerName ||
+                      'Walk-in Customer'}
                   </Typography>
 
                 </Grid>
 
-                <Grid item xs={12} sm={6}>
+                <Grid
+                  item
+                  xs={12}
+                  sm={6}
+                >
 
                   <Typography
                     variant="caption"
@@ -1038,8 +1386,12 @@ export default function Sales() {
 
                     <Chip
                       size="small"
-                      label={paymentLabel(selectedSale.paymentMethod)}
-                      color={paymentColor(selectedSale.paymentMethod)}
+                      label={paymentLabel(
+                        selectedSale.paymentMethod
+                      )}
+                      color={paymentColor(
+                        selectedSale.paymentMethod
+                      )}
                     />
 
                   </Box>
@@ -1073,7 +1425,9 @@ export default function Sales() {
 
                 <Table
                   size="small"
-                  sx={{ minWidth: 700 }}
+                  sx={{
+                    minWidth: 700
+                  }}
                 >
 
                   <TableHead>
@@ -1110,7 +1464,8 @@ export default function Sales() {
 
                   <TableBody>
 
-                    {(selectedSale.items || []).length === 0 ? (
+                    {(selectedSale.items ||
+                      []).length === 0 ? (
 
                       <TableRow>
 
@@ -1118,93 +1473,114 @@ export default function Sales() {
                           colSpan={6}
                           align="center"
                         >
+
                           <Typography
                             color="text.secondary"
                             sx={{ py: 2 }}
                           >
-                            No item details available.
+                            No item details
+                            available.
                           </Typography>
+
                         </TableCell>
 
                       </TableRow>
 
                     ) : (
 
-                      selectedSale.items.map((item, index) => (
+                      selectedSale.items.map(
+                        (
+                          item,
+                          index
+                        ) => (
 
-                        <TableRow
-                          key={
-                            item.id ||
-                            item.productId ||
-                            `${item.sku}-${index}`
-                          }
-                        >
+                          <TableRow
+                            key={
+                              item.id ||
+                              item.productId ||
+                              `${item.sku}-${index}`
+                            }
+                          >
 
-                          {/* PRODUCT */}
+                            {/* PRODUCT */}
 
-                          <TableCell>
+                            <TableCell>
 
-                            <Typography fontWeight={700}>
-                              {item.productName || 'Unnamed Product'}
-                            </Typography>
-
-                            {item.barcode && (
-
-                              <Typography
-                                variant="caption"
-                                color="text.secondary"
-                              >
-                                Barcode: {item.barcode}
+                              <Typography fontWeight={700}>
+                                {item.productName ||
+                                  'Unnamed Product'}
                               </Typography>
 
-                            )}
+                              {item.barcode && (
 
-                          </TableCell>
+                                <Typography
+                                  variant="caption"
+                                  color="text.secondary"
+                                >
+                                  Barcode:{' '}
+                                  {
+                                    item.barcode
+                                  }
+                                </Typography>
 
-                          {/* SKU */}
+                              )}
 
-                          <TableCell>
-                            {item.sku || '-'}
-                          </TableCell>
+                            </TableCell>
 
-                          {/* QUANTITY */}
+                            {/* SKU */}
 
-                          <TableCell align="center">
-                            {Number(item.quantity) || 0}
-                          </TableCell>
+                            <TableCell>
+                              {item.sku ||
+                                '-'}
+                            </TableCell>
 
-                          {/* UNIT PRICE */}
+                            {/* QUANTITY */}
 
-                          <TableCell align="right">
-                            {formatTZS(item.unitPrice)}
-                          </TableCell>
+                            <TableCell align="center">
+                              {Number(
+                                item.quantity
+                              ) || 0}
+                            </TableCell>
 
-                          {/* SUBTOTAL */}
+                            {/* UNIT PRICE */}
 
-                          <TableCell align="right">
+                            <TableCell align="right">
+                              {formatTZS(
+                                item.unitPrice
+                              )}
+                            </TableCell>
 
-                            <Typography fontWeight={700}>
-                              {formatTZS(item.subtotal)}
-                            </Typography>
+                            {/* SUBTOTAL */}
 
-                          </TableCell>
+                            <TableCell align="right">
 
-                          {/* PROFIT */}
+                              <Typography fontWeight={700}>
+                                {formatTZS(
+                                  item.subtotal
+                                )}
+                              </Typography>
 
-                          <TableCell align="right">
+                            </TableCell>
 
-                            <Typography
-                              color="success.main"
-                              fontWeight={700}
-                            >
-                              {formatTZS(item.profit)}
-                            </Typography>
+                            {/* PROFIT */}
 
-                          </TableCell>
+                            <TableCell align="right">
 
-                        </TableRow>
+                              <Typography
+                                color="success.main"
+                                fontWeight={700}
+                              >
+                                {formatTZS(
+                                  item.profit
+                                )}
+                              </Typography>
 
-                      ))
+                            </TableCell>
+
+                          </TableRow>
+
+                        )
+                      )
 
                     )}
 
@@ -1240,7 +1616,9 @@ export default function Sales() {
                     </Typography>
 
                     <Typography fontWeight={700}>
-                      {getItemQuantity(selectedSale)}
+                      {getItemQuantity(
+                        selectedSale
+                      )}
                     </Typography>
 
                   </Box>
@@ -1257,7 +1635,9 @@ export default function Sales() {
                     </Typography>
 
                     <Typography>
-                      {formatTZS(selectedSale.subtotal)}
+                      {formatTZS(
+                        selectedSale.subtotal
+                      )}
                     </Typography>
 
                   </Box>
@@ -1274,7 +1654,9 @@ export default function Sales() {
                     </Typography>
 
                     <Typography>
-                      {formatTZS(selectedSale.tax)}
+                      {formatTZS(
+                        selectedSale.tax
+                      )}
                     </Typography>
 
                   </Box>
@@ -1298,14 +1680,17 @@ export default function Sales() {
                       color="primary"
                       fontWeight={700}
                     >
-                      {formatTZS(selectedSale.total)}
+                      {formatTZS(
+                        selectedSale.total
+                      )}
                     </Typography>
 
                   </Box>
 
                   {/* CASH */}
 
-                  {selectedSale.paymentMethod === 'cash' && (
+                  {selectedSale.paymentMethod ===
+                    'cash' && (
 
                     <>
 
@@ -1321,7 +1706,9 @@ export default function Sales() {
                         </Typography>
 
                         <Typography>
-                          {formatTZS(selectedSale.cashGiven)}
+                          {formatTZS(
+                            selectedSale.cashGiven
+                          )}
                         </Typography>
 
                       </Box>
@@ -1339,7 +1726,9 @@ export default function Sales() {
                           fontWeight={700}
                           color="success.main"
                         >
-                          {formatTZS(selectedSale.changeAmount)}
+                          {formatTZS(
+                            selectedSale.changeAmount
+                          )}
                         </Typography>
 
                       </Box>
@@ -1365,7 +1754,9 @@ export default function Sales() {
                       fontWeight={700}
                       color="success.main"
                     >
-                      {formatTZS(selectedSale.totalProfit)}
+                      {formatTZS(
+                        selectedSale.totalProfit
+                      )}
                     </Typography>
 
                   </Box>
@@ -1378,13 +1769,17 @@ export default function Sales() {
 
             {/* DIALOG ACTIONS */}
 
-            <DialogActions sx={{ p: 2 }}>
+            <DialogActions
+              sx={{ p: 2 }}
+            >
 
               <Button
                 variant="outlined"
                 fullWidth
                 size="large"
-                onClick={handleCloseDetails}
+                onClick={
+                  handleCloseDetails
+                }
               >
                 Close
               </Button>
