@@ -36,6 +36,25 @@ import { getSales } from 'api/salesApi';
 
 export default function Sales() {
   // =========================================================
+  // HELPERS
+  // =========================================================
+
+  /**
+   * Returns today's date in YYYY-MM-DD format.
+   *
+   * This is used for the default sales date filter.
+   */
+  const getToday = () => {
+    const today = new Date();
+
+    const year = today.getFullYear();
+    const month = String(today.getMonth() + 1).padStart(2, '0');
+    const day = String(today.getDate()).padStart(2, '0');
+
+    return `${year}-${month}-${day}`;
+  };
+
+  // =========================================================
   // STATE
   // =========================================================
 
@@ -65,13 +84,15 @@ export default function Sales() {
 
   const [search, setSearch] = useState('');
 
-  const [startDate, setStartDate] = useState('');
+  // Default to today's sales
+  const [startDate, setStartDate] = useState(getToday());
 
-  const [endDate, setEndDate] = useState('');
+  const [endDate, setEndDate] = useState(getToday());
 
   const [page, setPage] = useState(1);
 
-  const [limit, setLimit] = useState(20);
+  // Default to 500 transactions
+  const [limit, setLimit] = useState(500);
 
   const [totalPages, setTotalPages] = useState(1);
 
@@ -124,19 +145,14 @@ export default function Sales() {
     try {
       const params = {
         page: overrides.page ?? page,
+
         limit: overrides.limit ?? limit,
-        search:
-          overrides.search !== undefined
-            ? overrides.search
-            : search.trim() || undefined,
-        startDate:
-          overrides.startDate !== undefined
-            ? overrides.startDate
-            : startDate || undefined,
-        endDate:
-          overrides.endDate !== undefined
-            ? overrides.endDate
-            : endDate || undefined
+
+        search: overrides.search !== undefined ? overrides.search : search.trim() || undefined,
+
+        startDate: overrides.startDate !== undefined ? overrides.startDate : startDate || undefined,
+
+        endDate: overrides.endDate !== undefined ? overrides.endDate : endDate || undefined
       };
 
       console.log('GET SALES PARAMS:', params);
@@ -146,81 +162,42 @@ export default function Sales() {
       console.log('GET SALES RESPONSE:', response);
 
       if (!response?.successful) {
-        throw new Error(
-          response?.message || 'Unable to load sales.'
-        );
+        throw new Error(response?.message || 'Unable to load sales.');
       }
 
-      setSales(
-        Array.isArray(response.data)
-          ? response.data
-          : []
-      );
+      setSales(Array.isArray(response.data) ? response.data : []);
 
       setSummary({
-        transactions: Number(
-          response.summary?.transactions || 0
-        ),
+        transactions: Number(response.summary?.transactions || 0),
 
-        sales: Number(
-          response.summary?.sales || 0
-        ),
+        sales: Number(response.summary?.sales || 0),
 
-        paidNow: Number(
-          response.summary?.paidNow || 0
-        ),
+        paidNow: Number(response.summary?.paidNow || 0),
 
-        outstanding: Number(
-          response.summary?.outstanding || 0
-        ),
+        outstanding: Number(response.summary?.outstanding || 0),
 
-        profit: Number(
-          response.summary?.profit || 0
-        ),
+        profit: Number(response.summary?.profit || 0),
 
-        items: Number(
-          response.summary?.items || 0
-        ),
+        items: Number(response.summary?.items || 0),
 
         loans: {
-          transactions: Number(
-            response.summary?.loans?.transactions || 0
-          ),
+          transactions: Number(response.summary?.loans?.transactions || 0),
 
-          total: Number(
-            response.summary?.loans?.total || 0
-          ),
+          total: Number(response.summary?.loans?.total || 0),
 
-          paidNow: Number(
-            response.summary?.loans?.paidNow || 0
-          ),
+          paidNow: Number(response.summary?.loans?.paidNow || 0),
 
-          outstanding: Number(
-            response.summary?.loans?.outstanding || 0
-          ),
+          outstanding: Number(response.summary?.loans?.outstanding || 0),
 
-          unpaid: Number(
-            response.summary?.loans?.unpaid || 0
-          ),
+          unpaid: Number(response.summary?.loans?.unpaid || 0),
 
-          partial: Number(
-            response.summary?.loans?.partial || 0
-          ),
+          partial: Number(response.summary?.loans?.partial || 0),
 
-          paid: Number(
-            response.summary?.loans?.paid || 0
-          )
+          paid: Number(response.summary?.loans?.paid || 0)
         }
       });
 
-      setTotalPages(
-        Math.max(
-          Number(
-            response.pagination?.totalPages || 1
-          ),
-          1
-        )
-      );
+      setTotalPages(Math.max(Number(response.pagination?.totalPages || 1), 1));
     } catch (err) {
       console.error('Load sales error:', err);
 
@@ -246,11 +223,7 @@ export default function Sales() {
 
       setTotalPages(1);
 
-      setError(
-        err?.response?.data?.message ||
-          err?.message ||
-          'Failed to load sales.'
-      );
+      setError(err?.response?.data?.message || err?.message || 'Failed to load sales.');
     } finally {
       setLoading(false);
     }
@@ -294,22 +267,25 @@ export default function Sales() {
   // =========================================================
 
   const clearFilters = () => {
+    const today = getToday();
+
     setSearch('');
-    setStartDate('');
-    setEndDate('');
+    setStartDate(today);
+    setEndDate(today);
+    setPage(1);
 
-    if (page !== 1) {
-      setPage(1);
-
-      return;
+    /**
+     * When already on page 1, the useEffect will not run because
+     * the page value does not change. Therefore explicitly reload.
+     */
+    if (page === 1) {
+      loadSales({
+        page: 1,
+        search: undefined,
+        startDate: today,
+        endDate: today
+      });
     }
-
-    loadSales({
-      page: 1,
-      search: undefined,
-      startDate: undefined,
-      endDate: undefined
-    });
   };
 
   // =========================================================
@@ -446,10 +422,7 @@ export default function Sales() {
   // =========================================================
 
   const getItemQuantity = (sale) => {
-    if (
-      sale?.totalQuantity !== undefined &&
-      sale?.totalQuantity !== null
-    ) {
+    if (sale?.totalQuantity !== undefined && sale?.totalQuantity !== null) {
       return Number(sale.totalQuantity) || 0;
     }
 
@@ -457,11 +430,7 @@ export default function Sales() {
       return 0;
     }
 
-    return sale.items.reduce(
-      (total, item) =>
-        total + (Number(item.quantity) || 0),
-      0
-    );
+    return sale.items.reduce((total, item) => total + (Number(item.quantity) || 0), 0);
   };
 
   // =========================================================
@@ -477,10 +446,7 @@ export default function Sales() {
   // =========================================================
 
   const getPaidNow = (sale) => {
-    if (
-      sale?.paidNow !== undefined &&
-      sale?.paidNow !== null
-    ) {
+    if (sale?.paidNow !== undefined && sale?.paidNow !== null) {
       return Number(sale.paidNow) || 0;
     }
 
@@ -492,10 +458,7 @@ export default function Sales() {
   // =========================================================
 
   const getOutstanding = (sale) => {
-    if (
-      sale?.remainingBalance !== undefined &&
-      sale?.remainingBalance !== null
-    ) {
+    if (sale?.remainingBalance !== undefined && sale?.remainingBalance !== null) {
       return Number(sale.remainingBalance) || 0;
     }
 
@@ -508,7 +471,6 @@ export default function Sales() {
 
   return (
     <Box sx={{ width: '100%' }}>
-
       {/* =====================================================
           HEADER
       ===================================================== */}
@@ -527,20 +489,12 @@ export default function Sales() {
         sx={{ mb: 3 }}
       >
         <Box>
-          <Typography
-            variant="h4"
-            fontWeight={700}
-          >
+          <Typography variant="h4" fontWeight={700}>
             Sales
           </Typography>
 
-          <Typography
-            variant="body2"
-            color="text.secondary"
-            sx={{ mt: 0.5 }}
-          >
-            View and manage completed sales
-            transactions and customer loans.
+          <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
+            View and manage completed sales transactions and customer loans.
           </Typography>
         </Box>
 
@@ -569,11 +523,7 @@ export default function Sales() {
       ===================================================== */}
 
       {error && (
-        <Alert
-          severity="error"
-          sx={{ mb: 3 }}
-          onClose={() => setError('')}
-        >
+        <Alert severity="error" sx={{ mb: 3 }} onClose={() => setError('')}>
           {error}
         </Alert>
       )}
@@ -582,34 +532,17 @@ export default function Sales() {
           SUMMARY
       ===================================================== */}
 
-      <Grid
-        container
-        spacing={2}
-        sx={{ mb: 3 }}
-      >
-
+      <Grid container spacing={2} sx={{ mb: 3 }}>
         {/* TRANSACTIONS */}
 
-        <Grid
-          item
-          xs={12}
-          sm={6}
-          md={3}
-        >
+        <Grid item xs={12} sm={6} md={3}>
           <Card>
             <CardContent>
-              <Typography
-                variant="body2"
-                color="text.secondary"
-              >
+              <Typography variant="body2" color="text.secondary">
                 Transactions
               </Typography>
 
-              <Typography
-                variant="h4"
-                fontWeight={700}
-                sx={{ mt: 1 }}
-              >
+              <Typography variant="h4" fontWeight={700} sx={{ mt: 1 }}>
                 {summary.transactions.toLocaleString()}
               </Typography>
             </CardContent>
@@ -618,27 +551,14 @@ export default function Sales() {
 
         {/* TOTAL SALES */}
 
-        <Grid
-          item
-          xs={12}
-          sm={6}
-          md={3}
-        >
+        <Grid item xs={12} sm={6} md={3}>
           <Card>
             <CardContent>
-              <Typography
-                variant="body2"
-                color="text.secondary"
-              >
+              <Typography variant="body2" color="text.secondary">
                 Total Sales
               </Typography>
 
-              <Typography
-                variant="h4"
-                fontWeight={700}
-                color="primary"
-                sx={{ mt: 1 }}
-              >
+              <Typography variant="h4" fontWeight={700} color="primary" sx={{ mt: 1 }}>
                 {formatTZS(summary.sales)}
               </Typography>
             </CardContent>
@@ -647,34 +567,18 @@ export default function Sales() {
 
         {/* PAID NOW */}
 
-        <Grid
-          item
-          xs={12}
-          sm={6}
-          md={3}
-        >
+        <Grid item xs={12} sm={6} md={3}>
           <Card>
             <CardContent>
-              <Typography
-                variant="body2"
-                color="text.secondary"
-              >
+              <Typography variant="body2" color="text.secondary">
                 Paid Now
               </Typography>
 
-              <Typography
-                variant="h4"
-                fontWeight={700}
-                color="success.main"
-                sx={{ mt: 1 }}
-              >
+              <Typography variant="h4" fontWeight={700} color="success.main" sx={{ mt: 1 }}>
                 {formatTZS(summary.paidNow)}
               </Typography>
 
-              <Typography
-                variant="caption"
-                color="text.secondary"
-              >
+              <Typography variant="caption" color="text.secondary">
                 Amount collected
               </Typography>
             </CardContent>
@@ -683,38 +587,18 @@ export default function Sales() {
 
         {/* OUTSTANDING */}
 
-        <Grid
-          item
-          xs={12}
-          sm={6}
-          md={3}
-        >
+        <Grid item xs={12} sm={6} md={3}>
           <Card>
             <CardContent>
-              <Typography
-                variant="body2"
-                color="text.secondary"
-              >
+              <Typography variant="body2" color="text.secondary">
                 Outstanding
               </Typography>
 
-              <Typography
-                variant="h4"
-                fontWeight={700}
-                color={
-                  summary.outstanding > 0
-                    ? 'error.main'
-                    : 'success.main'
-                }
-                sx={{ mt: 1 }}
-              >
+              <Typography variant="h4" fontWeight={700} color={summary.outstanding > 0 ? 'error.main' : 'success.main'} sx={{ mt: 1 }}>
                 {formatTZS(summary.outstanding)}
               </Typography>
 
-              <Typography
-                variant="caption"
-                color="text.secondary"
-              >
+              <Typography variant="caption" color="text.secondary">
                 Customer balances
               </Typography>
             </CardContent>
@@ -723,27 +607,14 @@ export default function Sales() {
 
         {/* PROFIT */}
 
-        <Grid
-          item
-          xs={12}
-          sm={6}
-          md={3}
-        >
+        <Grid item xs={12} sm={6} md={3}>
           <Card>
             <CardContent>
-              <Typography
-                variant="body2"
-                color="text.secondary"
-              >
+              <Typography variant="body2" color="text.secondary">
                 Profit
               </Typography>
 
-              <Typography
-                variant="h5"
-                fontWeight={700}
-                color="success.main"
-                sx={{ mt: 1 }}
-              >
+              <Typography variant="h5" fontWeight={700} color="success.main" sx={{ mt: 1 }}>
                 {formatTZS(summary.profit)}
               </Typography>
             </CardContent>
@@ -752,26 +623,14 @@ export default function Sales() {
 
         {/* ITEMS */}
 
-        <Grid
-          item
-          xs={12}
-          sm={6}
-          md={3}
-        >
+        <Grid item xs={12} sm={6} md={3}>
           <Card>
             <CardContent>
-              <Typography
-                variant="body2"
-                color="text.secondary"
-              >
+              <Typography variant="body2" color="text.secondary">
                 Items Sold
               </Typography>
 
-              <Typography
-                variant="h5"
-                fontWeight={700}
-                sx={{ mt: 1 }}
-              >
+              <Typography variant="h5" fontWeight={700} sx={{ mt: 1 }}>
                 {summary.items.toLocaleString()}
               </Typography>
             </CardContent>
@@ -780,38 +639,20 @@ export default function Sales() {
 
         {/* LOAN SALES */}
 
-        <Grid
-          item
-          xs={12}
-          sm={6}
-          md={3}
-        >
+        <Grid item xs={12} sm={6} md={3}>
           <Card>
             <CardContent>
-              <Typography
-                variant="body2"
-                color="text.secondary"
-              >
+              <Typography variant="body2" color="text.secondary">
                 Loan Sales
               </Typography>
 
-              <Typography
-                variant="h5"
-                fontWeight={700}
-                color="error.main"
-                sx={{ mt: 1 }}
-              >
+              <Typography variant="h5" fontWeight={700} color="error.main" sx={{ mt: 1 }}>
                 {formatTZS(summary.loans.total)}
               </Typography>
 
-              <Typography
-                variant="caption"
-                color="text.secondary"
-              >
+              <Typography variant="caption" color="text.secondary">
                 {summary.loans.transactions} loan transaction
-                {summary.loans.transactions === 1
-                  ? ''
-                  : 's'}
+                {summary.loans.transactions === 1 ? '' : 's'}
               </Typography>
             </CardContent>
           </Card>
@@ -819,47 +660,28 @@ export default function Sales() {
 
         {/* LOAN OUTSTANDING */}
 
-        <Grid
-          item
-          xs={12}
-          sm={6}
-          md={3}
-        >
+        <Grid item xs={12} sm={6} md={3}>
           <Card>
             <CardContent>
-              <Typography
-                variant="body2"
-                color="text.secondary"
-              >
+              <Typography variant="body2" color="text.secondary">
                 Loan Outstanding
               </Typography>
 
               <Typography
                 variant="h5"
                 fontWeight={700}
-                color={
-                  summary.loans.outstanding > 0
-                    ? 'error.main'
-                    : 'success.main'
-                }
+                color={summary.loans.outstanding > 0 ? 'error.main' : 'success.main'}
                 sx={{ mt: 1 }}
               >
-                {formatTZS(
-                  summary.loans.outstanding
-                )}
+                {formatTZS(summary.loans.outstanding)}
               </Typography>
 
-              <Typography
-                variant="caption"
-                color="text.secondary"
-              >
-                {summary.loans.partial} partial ·{' '}
-                {summary.loans.paid} paid
+              <Typography variant="caption" color="text.secondary">
+                {summary.loans.partial} partial · {summary.loans.paid} paid
               </Typography>
             </CardContent>
           </Card>
         </Grid>
-
       </Grid>
 
       {/* =====================================================
@@ -875,7 +697,6 @@ export default function Sales() {
           }}
         >
           <CardContent>
-
             <Stack
               direction={{
                 xs: 'column',
@@ -884,20 +705,12 @@ export default function Sales() {
               spacing={3}
               justifyContent="space-between"
             >
-
               <Box>
-                <Typography
-                  variant="h6"
-                  fontWeight={700}
-                >
+                <Typography variant="h6" fontWeight={700}>
                   Loan Summary
                 </Typography>
 
-                <Typography
-                  variant="body2"
-                  color="text.secondary"
-                  sx={{ mt: 0.5 }}
-                >
+                <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
                   Overview of customer credit sales.
                 </Typography>
               </Box>
@@ -909,97 +722,49 @@ export default function Sales() {
                 }}
                 spacing={2}
               >
-
                 <Box>
-                  <Typography
-                    variant="caption"
-                    color="text.secondary"
-                  >
+                  <Typography variant="caption" color="text.secondary">
                     Loan Sales
                   </Typography>
 
-                  <Typography fontWeight={700}>
-                    {formatTZS(
-                      summary.loans.total
-                    )}
-                  </Typography>
+                  <Typography fontWeight={700}>{formatTZS(summary.loans.total)}</Typography>
                 </Box>
 
                 <Box>
-                  <Typography
-                    variant="caption"
-                    color="text.secondary"
-                  >
+                  <Typography variant="caption" color="text.secondary">
                     Paid
                   </Typography>
 
-                  <Typography
-                    fontWeight={700}
-                    color="success.main"
-                  >
-                    {formatTZS(
-                      summary.loans.paidNow
-                    )}
+                  <Typography fontWeight={700} color="success.main">
+                    {formatTZS(summary.loans.paidNow)}
                   </Typography>
                 </Box>
 
                 <Box>
-                  <Typography
-                    variant="caption"
-                    color="text.secondary"
-                  >
+                  <Typography variant="caption" color="text.secondary">
                     Outstanding
                   </Typography>
 
-                  <Typography
-                    fontWeight={700}
-                    color="error.main"
-                  >
-                    {formatTZS(
-                      summary.loans.outstanding
-                    )}
+                  <Typography fontWeight={700} color="error.main">
+                    {formatTZS(summary.loans.outstanding)}
                   </Typography>
                 </Box>
 
                 <Box>
-                  <Typography
-                    variant="caption"
-                    color="text.secondary"
-                  >
+                  <Typography variant="caption" color="text.secondary">
                     Status
                   </Typography>
 
-                  <Stack
-                    direction="row"
-                    spacing={0.5}
-                    sx={{ mt: 0.5 }}
-                  >
-                    <Chip
-                      size="small"
-                      color="warning"
-                      label={`${summary.loans.partial} Partial`}
-                    />
+                  <Stack direction="row" spacing={0.5} sx={{ mt: 0.5 }}>
+                    <Chip size="small" color="warning" label={`${summary.loans.partial} Partial`} />
 
-                    <Chip
-                      size="small"
-                      color="success"
-                      label={`${summary.loans.paid} Paid`}
-                    />
+                    <Chip size="small" color="success" label={`${summary.loans.paid} Paid`} />
 
-                    {summary.loans.unpaid > 0 && (
-                      <Chip
-                        size="small"
-                        color="error"
-                        label={`${summary.loans.unpaid} Unpaid`}
-                      />
-                    )}
+                    {summary.loans.unpaid > 0 && <Chip size="small" color="error" label={`${summary.loans.unpaid} Unpaid`} />}
                   </Stack>
                 </Box>
-
               </Stack>
-
             </Stack>
-
           </CardContent>
         </Card>
       )}
@@ -1010,28 +775,16 @@ export default function Sales() {
 
       <Card sx={{ mb: 3 }}>
         <CardContent>
-
-          <Grid
-            container
-            spacing={2}
-            alignItems="center"
-          >
-
+          <Grid container spacing={2} alignItems="center">
             {/* SEARCH */}
 
-            <Grid
-              item
-              xs={12}
-              md={5}
-            >
+            <Grid item xs={12} md={5}>
               <TextField
                 fullWidth
                 label="Search Sales"
                 placeholder="Invoice, customer, SKU or barcode"
                 value={search}
-                onChange={(event) =>
-                  setSearch(event.target.value)
-                }
+                onChange={(event) => setSearch(event.target.value)}
                 onKeyDown={handleSearchKeyDown}
                 InputProps={{
                   startAdornment: (
@@ -1054,21 +807,14 @@ export default function Sales() {
 
             {/* START DATE */}
 
-            <Grid
-              item
-              xs={12}
-              sm={6}
-              md={2}
-            >
+            <Grid item xs={12} sm={6} md={2}>
               <TextField
                 fullWidth
                 type="date"
                 label="Start Date"
                 value={startDate}
                 onChange={(event) => {
-                  setStartDate(
-                    event.target.value
-                  );
+                  setStartDate(event.target.value);
                   setPage(1);
                 }}
                 InputLabelProps={{
@@ -1079,21 +825,14 @@ export default function Sales() {
 
             {/* END DATE */}
 
-            <Grid
-              item
-              xs={12}
-              sm={6}
-              md={2}
-            >
+            <Grid item xs={12} sm={6} md={2}>
               <TextField
                 fullWidth
                 type="date"
                 label="End Date"
                 value={endDate}
                 onChange={(event) => {
-                  setEndDate(
-                    event.target.value
-                  );
+                  setEndDate(event.target.value);
                   setPage(1);
                 }}
                 InputLabelProps={{
@@ -1104,76 +843,45 @@ export default function Sales() {
 
             {/* LIMIT */}
 
-            <Grid
-              item
-              xs={12}
-              sm={6}
-              md={1.5}
-            >
+            <Grid item xs={12} sm={6} md={1.5}>
               <Select
                 fullWidth
                 value={limit}
                 onChange={(event) => {
-                  setLimit(
-                    Number(event.target.value)
-                  );
+                  setLimit(Number(event.target.value));
                   setPage(1);
                 }}
               >
-                <MenuItem value={10}>
-                  10
-                </MenuItem>
+                <MenuItem value={10}>10</MenuItem>
 
-                <MenuItem value={20}>
-                  20
-                </MenuItem>
+                <MenuItem value={20}>20</MenuItem>
 
-                <MenuItem value={50}>
-                  50
-                </MenuItem>
+                <MenuItem value={50}>50</MenuItem>
 
-                <MenuItem value={100}>
-                  100
-                </MenuItem>
+                <MenuItem value={100}>100</MenuItem>
+
+                <MenuItem value={500}>500</MenuItem>
+
+                <MenuItem value={1000}>1,000</MenuItem>
+
+                <MenuItem value={2000}>2,000</MenuItem>
               </Select>
             </Grid>
 
             {/* ACTIONS */}
 
-            <Grid
-              item
-              xs={12}
-              sm={6}
-              md={1.5}
-            >
-              <Stack
-                direction="row"
-                spacing={1}
-                sx={{ width: '100%' }}
-              >
-
-                <Button
-                  variant="contained"
-                  fullWidth
-                  onClick={handleSearch}
-                  disabled={loading}
-                >
+            <Grid item xs={12} sm={6} md={1.5}>
+              <Stack direction="row" spacing={1} sx={{ width: '100%' }}>
+                <Button variant="contained" fullWidth onClick={handleSearch} disabled={loading}>
                   Search
                 </Button>
 
-                <Button
-                  variant="outlined"
-                  onClick={clearFilters}
-                  disabled={loading}
-                >
+                <Button variant="outlined" onClick={clearFilters} disabled={loading}>
                   Clear
                 </Button>
-
               </Stack>
             </Grid>
-
           </Grid>
-
         </CardContent>
       </Card>
 
@@ -1182,7 +890,6 @@ export default function Sales() {
       ===================================================== */}
 
       <Card>
-
         {/* TABLE HEADER */}
 
         <Box
@@ -1192,44 +899,25 @@ export default function Sales() {
             borderColor: 'divider'
           }}
         >
-          <Stack
-            direction="row"
-            justifyContent="space-between"
-            alignItems="center"
-          >
-
+          <Stack direction="row" justifyContent="space-between" alignItems="center">
             <Box>
-
-              <Typography
-                variant="h6"
-                fontWeight={600}
-              >
+              <Typography variant="h6" fontWeight={600}>
                 Sales Transactions
               </Typography>
 
-              <Typography
-                variant="body2"
-                color="text.secondary"
-              >
+              <Typography variant="body2" color="text.secondary">
                 {sales.length} transaction
-                {sales.length === 1
-                  ? ''
-                  : 's'} shown
+                {sales.length === 1 ? '' : 's'} shown
               </Typography>
-
             </Box>
 
-            {loading && (
-              <CircularProgress size={24} />
-            )}
-
+            {loading && <CircularProgress size={24} />}
           </Stack>
         </Box>
 
         {/* LOADING */}
 
         {loading && sales.length === 0 ? (
-
           <Box
             sx={{
               py: 8,
@@ -1238,16 +926,11 @@ export default function Sales() {
           >
             <CircularProgress />
 
-            <Typography
-              color="text.secondary"
-              sx={{ mt: 2 }}
-            >
+            <Typography color="text.secondary" sx={{ mt: 2 }}>
               Loading sales...
             </Typography>
           </Box>
-
         ) : sales.length === 0 ? (
-
           /* =================================================
              EMPTY STATE
           ================================================= */
@@ -1259,7 +942,6 @@ export default function Sales() {
               textAlign: 'center'
             }}
           >
-
             <Box
               component="div"
               sx={{
@@ -1271,25 +953,15 @@ export default function Sales() {
               🧾
             </Box>
 
-            <Typography
-              variant="h6"
-              sx={{ mt: 2 }}
-            >
+            <Typography variant="h6" sx={{ mt: 2 }}>
               No sales found
             </Typography>
 
-            <Typography
-              color="text.secondary"
-              sx={{ mt: 0.5 }}
-            >
-              Try changing your search or date
-              filters.
+            <Typography color="text.secondary" sx={{ mt: 0.5 }}>
+              Try changing your search or date filters.
             </Typography>
-
           </Box>
-
         ) : (
-
           /* =================================================
              TABLE
           ================================================= */
@@ -1304,305 +976,161 @@ export default function Sales() {
                 minWidth: 1250
               }}
             >
-
               <TableHead>
-
                 <TableRow>
+                  <TableCell>Invoice</TableCell>
 
-                  <TableCell>
-                    Invoice
-                  </TableCell>
+                  <TableCell>Date</TableCell>
 
-                  <TableCell>
-                    Date
-                  </TableCell>
+                  <TableCell>Customer</TableCell>
 
-                  <TableCell>
-                    Customer
-                  </TableCell>
+                  <TableCell>Items</TableCell>
 
-                  <TableCell>
-                    Items
-                  </TableCell>
+                  <TableCell>Payment</TableCell>
 
-                  <TableCell>
-                    Payment
-                  </TableCell>
+                  <TableCell>Loan Status</TableCell>
 
-                  <TableCell>
-                    Loan Status
-                  </TableCell>
+                  <TableCell align="right">Total</TableCell>
 
-                  <TableCell align="right">
-                    Total
-                  </TableCell>
+                  <TableCell align="right">Paid</TableCell>
 
-                  <TableCell align="right">
-                    Paid
-                  </TableCell>
+                  <TableCell align="right">Outstanding</TableCell>
 
-                  <TableCell align="right">
-                    Outstanding
-                  </TableCell>
+                  <TableCell align="right">Profit</TableCell>
 
-                  <TableCell align="right">
-                    Profit
-                  </TableCell>
-
-                  <TableCell align="center">
-                    Action
-                  </TableCell>
-
+                  <TableCell align="center">Action</TableCell>
                 </TableRow>
-
               </TableHead>
 
               <TableBody>
-
                 {sales.map((sale) => {
+                  const loan = isLoanSale(sale);
 
-                  const loan =
-                    isLoanSale(sale);
+                  const paidNow = getPaidNow(sale);
 
-                  const paidNow =
-                    getPaidNow(sale);
-
-                  const outstanding =
-                    getOutstanding(sale);
+                  const outstanding = getOutstanding(sale);
 
                   return (
-                    <TableRow
-                      key={
-                        sale.id ||
-                        sale.invoiceNumber
-                      }
-                      hover
-                    >
-
+                    <TableRow key={sale.id || sale.invoiceNumber} hover>
                       {/* INVOICE */}
 
                       <TableCell>
-
                         <Typography
                           fontWeight={700}
                           sx={{
-                            whiteSpace:
-                              'nowrap'
+                            whiteSpace: 'nowrap'
                           }}
                         >
-                          {sale.invoiceNumber ||
-                            '-'}
+                          {sale.invoiceNumber || '-'}
                         </Typography>
-
                       </TableCell>
 
                       {/* DATE */}
 
                       <TableCell>
-
                         <Typography
                           variant="body2"
                           sx={{
-                            whiteSpace:
-                              'nowrap'
+                            whiteSpace: 'nowrap'
                           }}
                         >
-                          {formatDateTime(
-                            sale.createdAt
-                          )}
+                          {formatDateTime(sale.createdAt)}
                         </Typography>
-
                       </TableCell>
 
                       {/* CUSTOMER */}
 
                       <TableCell>
-
-                        <Typography
-                          fontWeight={
-                            sale.customerName
-                              ? 500
-                              : 400
-                          }
-                        >
-                          {sale.customerName ||
-                            'Walk-in Customer'}
-                        </Typography>
+                        <Typography fontWeight={sale.customerName ? 500 : 400}>{sale.customerName || 'Walk-in Customer'}</Typography>
 
                         {sale.customerMobile && (
-                          <Typography
-                            variant="caption"
-                            color="text.secondary"
-                          >
+                          <Typography variant="caption" color="text.secondary">
                             {sale.customerMobile}
                           </Typography>
                         )}
-
                       </TableCell>
 
                       {/* ITEMS */}
 
                       <TableCell>
-
-                        <Typography fontWeight={700}>
-                          {getItemQuantity(sale)}
-                        </Typography>
-
+                        <Typography fontWeight={700}>{getItemQuantity(sale)}</Typography>
                       </TableCell>
 
                       {/* PAYMENT */}
 
                       <TableCell>
-
-                        <Chip
-                          size="small"
-                          label={paymentLabel(
-                            sale.paymentMethod
-                          )}
-                          color={paymentColor(
-                            sale.paymentMethod
-                          )}
-                        />
-
+                        <Chip size="small" label={paymentLabel(sale.paymentMethod)} color={paymentColor(sale.paymentMethod)} />
                       </TableCell>
 
                       {/* LOAN STATUS */}
 
                       <TableCell>
-
                         {loan ? (
-
-                          <Chip
-                            size="small"
-                            label={loanStatusLabel(
-                              sale.loanStatus
-                            )}
-                            color={loanStatusColor(
-                              sale.loanStatus
-                            )}
-                          />
-
+                          <Chip size="small" label={loanStatusLabel(sale.loanStatus)} color={loanStatusColor(sale.loanStatus)} />
                         ) : (
-
-                          <Typography
-                            variant="body2"
-                            color="text.secondary"
-                          >
+                          <Typography variant="body2" color="text.secondary">
                             -
                           </Typography>
-
                         )}
-
                       </TableCell>
 
                       {/* TOTAL */}
 
                       <TableCell align="right">
-
-                        <Typography fontWeight={700}>
-                          {formatTZS(
-                            sale.total
-                          )}
-                        </Typography>
-
+                        <Typography fontWeight={700}>{formatTZS(sale.total)}</Typography>
                       </TableCell>
 
                       {/* PAID */}
 
                       <TableCell align="right">
-
-                        <Typography
-                          fontWeight={700}
-                          color={
-                            loan
-                              ? 'success.main'
-                              : 'text.primary'
-                          }
-                        >
-                          {formatTZS(
-                            paidNow
-                          )}
+                        <Typography fontWeight={700} color={loan ? 'success.main' : 'text.primary'}>
+                          {formatTZS(paidNow)}
                         </Typography>
-
                       </TableCell>
 
                       {/* OUTSTANDING */}
 
                       <TableCell align="right">
-
                         {outstanding > 0 ? (
-
-                          <Typography
-                            fontWeight={700}
-                            color="error.main"
-                          >
-                            {formatTZS(
-                              outstanding
-                            )}
+                          <Typography fontWeight={700} color="error.main">
+                            {formatTZS(outstanding)}
                           </Typography>
-
                         ) : (
-
-                          <Typography
-                            fontWeight={500}
-                            color="text.secondary"
-                          >
+                          <Typography fontWeight={500} color="text.secondary">
                             {formatTZS(0)}
                           </Typography>
-
                         )}
-
                       </TableCell>
 
                       {/* PROFIT */}
 
                       <TableCell align="right">
-
-                        <Typography
-                          fontWeight={700}
-                          color="success.main"
-                        >
-                          {formatTZS(
-                            sale.totalProfit
-                          )}
+                        <Typography fontWeight={700} color="success.main">
+                          {formatTZS(sale.totalProfit)}
                         </Typography>
-
                       </TableCell>
 
                       {/* ACTION */}
 
                       <TableCell align="center">
-
-                        <IconButton
-                          color="primary"
-                          onClick={() =>
-                            handleViewSale(sale)
-                          }
-                          title="View sale"
-                        >
+                        <IconButton color="primary" onClick={() => handleViewSale(sale)} title="View sale">
                           <Box
                             component="span"
                             sx={{
-                              fontSize:
-                                '1.25rem',
+                              fontSize: '1.25rem',
                               lineHeight: 1
                             }}
                           >
                             👁
                           </Box>
                         </IconButton>
-
                       </TableCell>
-
                     </TableRow>
                   );
                 })}
-
               </TableBody>
-
             </Table>
           </TableContainer>
-
         )}
 
         {/* =================================================
@@ -1610,7 +1138,6 @@ export default function Sales() {
         ================================================= */}
 
         {totalPages > 1 && (
-
           <Box
             sx={{
               p: 2,
@@ -1620,40 +1147,27 @@ export default function Sales() {
               justifyContent: 'center'
             }}
           >
-
             <Pagination
               count={totalPages}
               page={page}
-              onChange={(_, value) =>
-                setPage(value)
-              }
+              onChange={(_, value) => setPage(value)}
               color="primary"
               disabled={loading}
               showFirstButton
               showLastButton
             />
-
           </Box>
-
         )}
-
       </Card>
 
       {/* =====================================================
           SALE DETAILS DIALOG
       ===================================================== */}
 
-      <Dialog
-        open={detailsOpen}
-        onClose={handleCloseDetails}
-        fullWidth
-        maxWidth="md"
-      >
-
+      <Dialog open={detailsOpen} onClose={handleCloseDetails} fullWidth maxWidth="md">
         {/* DIALOG TITLE */}
 
         <DialogTitle>
-
           <Stack
             direction={{
               xs: 'column',
@@ -1666,207 +1180,97 @@ export default function Sales() {
             }}
             spacing={1}
           >
-
             <Box>
-
-              <Typography
-                variant="h6"
-                fontWeight={700}
-              >
+              <Typography variant="h6" fontWeight={700}>
                 Sale Details
               </Typography>
 
-              <Typography
-                variant="body2"
-                color="text.secondary"
-              >
-                {selectedSale?.invoiceNumber ||
-                  '-'}
+              <Typography variant="body2" color="text.secondary">
+                {selectedSale?.invoiceNumber || '-'}
               </Typography>
-
             </Box>
 
-            {selectedSale && (
-              <Chip
-                label={
-                  selectedSale.status ||
-                  'unknown'
-                }
-                color={statusColor(
-                  selectedSale.status
-                )}
-              />
-            )}
-
+            {selectedSale && <Chip label={selectedSale.status || 'unknown'} color={statusColor(selectedSale.status)} />}
           </Stack>
-
         </DialogTitle>
 
         {/* DIALOG CONTENT */}
 
         {selectedSale && (
-
           <>
-
             <DialogContent dividers>
-
               {/* =============================================
-                  CUSTOMER INFORMATION
+                  SALE INFORMATION
               ============================================= */}
 
-              <Typography
-                variant="h6"
-                fontWeight={700}
-                gutterBottom
-              >
+              <Typography variant="h6" fontWeight={700} gutterBottom>
                 Sale Information
               </Typography>
 
-              <Grid
-                container
-                spacing={2}
-              >
-
+              <Grid container spacing={2}>
                 {/* INVOICE */}
 
-                <Grid
-                  item
-                  xs={12}
-                  sm={6}
-                >
-                  <Typography
-                    variant="caption"
-                    color="text.secondary"
-                  >
+                <Grid item xs={12} sm={6}>
+                  <Typography variant="caption" color="text.secondary">
                     Invoice Number
                   </Typography>
 
-                  <Typography fontWeight={700}>
-                    {selectedSale.invoiceNumber ||
-                      '-'}
-                  </Typography>
+                  <Typography fontWeight={700}>{selectedSale.invoiceNumber || '-'}</Typography>
                 </Grid>
 
                 {/* DATE */}
 
-                <Grid
-                  item
-                  xs={12}
-                  sm={6}
-                >
-                  <Typography
-                    variant="caption"
-                    color="text.secondary"
-                  >
+                <Grid item xs={12} sm={6}>
+                  <Typography variant="caption" color="text.secondary">
                     Sale Date
                   </Typography>
 
-                  <Typography fontWeight={700}>
-                    {formatDateTime(
-                      selectedSale.createdAt
-                    )}
-                  </Typography>
+                  <Typography fontWeight={700}>{formatDateTime(selectedSale.createdAt)}</Typography>
                 </Grid>
 
                 {/* CUSTOMER */}
 
-                <Grid
-                  item
-                  xs={12}
-                  sm={6}
-                >
-                  <Typography
-                    variant="caption"
-                    color="text.secondary"
-                  >
+                <Grid item xs={12} sm={6}>
+                  <Typography variant="caption" color="text.secondary">
                     Customer
                   </Typography>
 
-                  <Typography fontWeight={700}>
-                    {selectedSale.customerName ||
-                      'Walk-in Customer'}
-                  </Typography>
+                  <Typography fontWeight={700}>{selectedSale.customerName || 'Walk-in Customer'}</Typography>
                 </Grid>
 
                 {/* MOBILE */}
 
-                <Grid
-                  item
-                  xs={12}
-                  sm={6}
-                >
-                  <Typography
-                    variant="caption"
-                    color="text.secondary"
-                  >
+                <Grid item xs={12} sm={6}>
+                  <Typography variant="caption" color="text.secondary">
                     Customer Mobile
                   </Typography>
 
-                  <Typography fontWeight={700}>
-                    {selectedSale.customerMobile ||
-                      '-'}
-                  </Typography>
+                  <Typography fontWeight={700}>{selectedSale.customerMobile || '-'}</Typography>
                 </Grid>
 
                 {/* PAYMENT */}
 
-                <Grid
-                  item
-                  xs={12}
-                  sm={6}
-                >
-                  <Typography
-                    variant="caption"
-                    color="text.secondary"
-                  >
+                <Grid item xs={12} sm={6}>
+                  <Typography variant="caption" color="text.secondary">
                     Payment Method
                   </Typography>
 
                   <Box sx={{ mt: 0.5 }}>
-
-                    <Chip
-                      size="small"
-                      label={paymentLabel(
-                        selectedSale.paymentMethod
-                      )}
-                      color={paymentColor(
-                        selectedSale.paymentMethod
-                      )}
-                    />
-
+                    <Chip size="small" label={paymentLabel(selectedSale.paymentMethod)} color={paymentColor(selectedSale.paymentMethod)} />
                   </Box>
                 </Grid>
 
                 {/* STATUS */}
 
-                <Grid
-                  item
-                  xs={12}
-                  sm={6}
-                >
-                  <Typography
-                    variant="caption"
-                    color="text.secondary"
-                  >
+                <Grid item xs={12} sm={6}>
+                  <Typography variant="caption" color="text.secondary">
                     Sale Status
                   </Typography>
 
                   <Box sx={{ mt: 0.5 }}>
-
-                    <Chip
-                      size="small"
-                      label={
-                        selectedSale.status ||
-                        'unknown'
-                      }
-                      color={statusColor(
-                        selectedSale.status
-                      )}
-                    />
-
+                    <Chip size="small" label={selectedSale.status || 'unknown'} color={statusColor(selectedSale.status)} />
                   </Box>
                 </Grid>
-
               </Grid>
 
               {/* =============================================
@@ -1875,191 +1279,97 @@ export default function Sales() {
 
               {isLoanSale(selectedSale) && (
                 <>
-
                   <Divider sx={{ my: 3 }} />
 
                   <Card
                     variant="outlined"
                     sx={{
-                      borderColor:
-                        'error.light',
-                      backgroundColor:
-                        'error.50'
+                      borderColor: 'error.light',
+                      backgroundColor: 'error.50'
                     }}
                   >
-
                     <CardContent>
-
-                      <Typography
-                        variant="h6"
-                        fontWeight={700}
-                        sx={{ mb: 2 }}
-                      >
+                      <Typography variant="h6" fontWeight={700} sx={{ mb: 2 }}>
                         Loan Details
                       </Typography>
 
-                      <Grid
-                        container
-                        spacing={2}
-                      >
-
+                      <Grid container spacing={2}>
                         {/* LOAN STATUS */}
 
-                        <Grid
-                          item
-                          xs={12}
-                          sm={4}
-                        >
-                          <Typography
-                            variant="caption"
-                            color="text.secondary"
-                          >
+                        <Grid item xs={12} sm={4}>
+                          <Typography variant="caption" color="text.secondary">
                             Loan Status
                           </Typography>
 
                           <Box sx={{ mt: 0.5 }}>
-
                             <Chip
                               size="small"
-                              label={loanStatusLabel(
-                                selectedSale.loanStatus
-                              )}
-                              color={loanStatusColor(
-                                selectedSale.loanStatus
-                              )}
+                              label={loanStatusLabel(selectedSale.loanStatus)}
+                              color={loanStatusColor(selectedSale.loanStatus)}
                             />
-
                           </Box>
                         </Grid>
 
                         {/* TOTAL */}
 
-                        <Grid
-                          item
-                          xs={12}
-                          sm={4}
-                        >
-                          <Typography
-                            variant="caption"
-                            color="text.secondary"
-                          >
+                        <Grid item xs={12} sm={4}>
+                          <Typography variant="caption" color="text.secondary">
                             Loan Amount
                           </Typography>
 
-                          <Typography
-                            fontWeight={700}
-                          >
-                            {formatTZS(
-                              selectedSale.total
-                            )}
-                          </Typography>
+                          <Typography fontWeight={700}>{formatTZS(selectedSale.total)}</Typography>
                         </Grid>
 
                         {/* PAID NOW */}
 
-                        <Grid
-                          item
-                          xs={12}
-                          sm={4}
-                        >
-                          <Typography
-                            variant="caption"
-                            color="text.secondary"
-                          >
+                        <Grid item xs={12} sm={4}>
+                          <Typography variant="caption" color="text.secondary">
                             Paid Now
                           </Typography>
 
-                          <Typography
-                            fontWeight={700}
-                            color="success.main"
-                          >
-                            {formatTZS(
-                              selectedSale.paidNow
-                            )}
+                          <Typography fontWeight={700} color="success.main">
+                            {formatTZS(selectedSale.paidNow)}
                           </Typography>
                         </Grid>
 
                         {/* OUTSTANDING */}
 
-                        <Grid
-                          item
-                          xs={12}
-                          sm={4}
-                        >
-                          <Typography
-                            variant="caption"
-                            color="text.secondary"
-                          >
+                        <Grid item xs={12} sm={4}>
+                          <Typography variant="caption" color="text.secondary">
                             Outstanding Balance
                           </Typography>
 
                           <Typography
                             variant="h6"
                             fontWeight={700}
-                            color={
-                              getOutstanding(
-                                selectedSale
-                              ) > 0
-                                ? 'error.main'
-                                : 'success.main'
-                            }
+                            color={getOutstanding(selectedSale) > 0 ? 'error.main' : 'success.main'}
                           >
-                            {formatTZS(
-                              selectedSale.remainingBalance
-                            )}
+                            {formatTZS(selectedSale.remainingBalance)}
                           </Typography>
                         </Grid>
 
                         {/* CUSTOMER */}
 
-                        <Grid
-                          item
-                          xs={12}
-                          sm={4}
-                        >
-                          <Typography
-                            variant="caption"
-                            color="text.secondary"
-                          >
+                        <Grid item xs={12} sm={4}>
+                          <Typography variant="caption" color="text.secondary">
                             Debtor
                           </Typography>
 
-                          <Typography
-                            fontWeight={700}
-                          >
-                            {selectedSale.customerName ||
-                              'Walk-in Customer'}
-                          </Typography>
+                          <Typography fontWeight={700}>{selectedSale.customerName || 'Walk-in Customer'}</Typography>
                         </Grid>
 
                         {/* PHONE */}
 
-                        <Grid
-                          item
-                          xs={12}
-                          sm={4}
-                        >
-                          <Typography
-                            variant="caption"
-                            color="text.secondary"
-                          >
+                        <Grid item xs={12} sm={4}>
+                          <Typography variant="caption" color="text.secondary">
                             Customer Mobile
                           </Typography>
 
-                          <Typography
-                            fontWeight={700}
-                          >
-                            {selectedSale.customerMobile ||
-                              '-'}
-                          </Typography>
+                          <Typography fontWeight={700}>{selectedSale.customerMobile || '-'}</Typography>
                         </Grid>
-
                       </Grid>
-
                     </CardContent>
-
                   </Card>
-
                 </>
               )}
 
@@ -2069,11 +1379,7 @@ export default function Sales() {
                   ITEMS
               ============================================= */}
 
-              <Typography
-                variant="h6"
-                gutterBottom
-                fontWeight={700}
-              >
+              <Typography variant="h6" gutterBottom fontWeight={700}>
                 Items
               </Typography>
 
@@ -2085,160 +1391,77 @@ export default function Sales() {
                   overflowX: 'auto'
                 }}
               >
-
-                <Table
-                  size="small"
-                  sx={{ minWidth: 700 }}
-                >
-
+                <Table size="small" sx={{ minWidth: 700 }}>
                   <TableHead>
-
                     <TableRow>
+                      <TableCell>Product</TableCell>
 
-                      <TableCell>
-                        Product
-                      </TableCell>
+                      <TableCell>SKU</TableCell>
 
-                      <TableCell>
-                        SKU
-                      </TableCell>
+                      <TableCell align="center">Qty</TableCell>
 
-                      <TableCell align="center">
-                        Qty
-                      </TableCell>
+                      <TableCell align="right">Unit Price</TableCell>
 
-                      <TableCell align="right">
-                        Unit Price
-                      </TableCell>
+                      <TableCell align="right">Subtotal</TableCell>
 
-                      <TableCell align="right">
-                        Subtotal
-                      </TableCell>
-
-                      <TableCell align="right">
-                        Profit
-                      </TableCell>
-
+                      <TableCell align="right">Profit</TableCell>
                     </TableRow>
-
                   </TableHead>
 
                   <TableBody>
-
-                    {(selectedSale.items || [])
-                      .length === 0 ? (
-
+                    {(selectedSale.items || []).length === 0 ? (
                       <TableRow>
-
-                        <TableCell
-                          colSpan={6}
-                          align="center"
-                        >
-                          <Typography
-                            color="text.secondary"
-                            sx={{ py: 2 }}
-                          >
-                            No item details
-                            available.
+                        <TableCell colSpan={6} align="center">
+                          <Typography color="text.secondary" sx={{ py: 2 }}>
+                            No item details available.
                           </Typography>
                         </TableCell>
-
                       </TableRow>
-
                     ) : (
+                      selectedSale.items.map((item, index) => (
+                        <TableRow key={item.id || item.productId || `${item.sku}-${index}`}>
+                          {/* PRODUCT */}
 
-                      selectedSale.items.map(
-                        (item, index) => (
+                          <TableCell>
+                            <Typography fontWeight={700}>{item.productName || 'Unnamed Product'}</Typography>
 
-                          <TableRow
-                            key={
-                              item.id ||
-                              item.productId ||
-                              `${item.sku}-${index}`
-                            }
-                          >
-
-                            {/* PRODUCT */}
-
-                            <TableCell>
-
-                              <Typography fontWeight={700}>
-                                {item.productName ||
-                                  'Unnamed Product'}
+                            {item.barcode && (
+                              <Typography variant="caption" color="text.secondary">
+                                Barcode: {item.barcode}
                               </Typography>
+                            )}
+                          </TableCell>
 
-                              {item.barcode && (
-                                <Typography
-                                  variant="caption"
-                                  color="text.secondary"
-                                >
-                                  Barcode:{' '}
-                                  {item.barcode}
-                                </Typography>
-                              )}
+                          {/* SKU */}
 
-                            </TableCell>
+                          <TableCell>{item.sku || '-'}</TableCell>
 
-                            {/* SKU */}
+                          {/* QUANTITY */}
 
-                            <TableCell>
-                              {item.sku || '-'}
-                            </TableCell>
+                          <TableCell align="center">{Number(item.quantity) || 0}</TableCell>
 
-                            {/* QUANTITY */}
+                          {/* UNIT PRICE */}
 
-                            <TableCell align="center">
-                              {Number(
-                                item.quantity
-                              ) || 0}
-                            </TableCell>
+                          <TableCell align="right">{formatTZS(item.unitPrice)}</TableCell>
 
-                            {/* UNIT PRICE */}
+                          {/* SUBTOTAL */}
 
-                            <TableCell align="right">
-                              {formatTZS(
-                                item.unitPrice
-                              )}
-                            </TableCell>
+                          <TableCell align="right">
+                            <Typography fontWeight={700}>{formatTZS(item.subtotal)}</Typography>
+                          </TableCell>
 
-                            {/* SUBTOTAL */}
+                          {/* PROFIT */}
 
-                            <TableCell align="right">
-
-                              <Typography fontWeight={700}>
-                                {formatTZS(
-                                  item.subtotal
-                                )}
-                              </Typography>
-
-                            </TableCell>
-
-                            {/* PROFIT */}
-
-                            <TableCell align="right">
-
-                              <Typography
-                                color="success.main"
-                                fontWeight={700}
-                              >
-                                {formatTZS(
-                                  item.profit
-                                )}
-                              </Typography>
-
-                            </TableCell>
-
-                          </TableRow>
-
-                        )
-                      )
-
+                          <TableCell align="right">
+                            <Typography color="success.main" fontWeight={700}>
+                              {formatTZS(item.profit)}
+                            </Typography>
+                          </TableCell>
+                        </TableRow>
+                      ))
                     )}
-
                   </TableBody>
-
                 </Table>
-
               </TableContainer>
 
               {/* =============================================
@@ -2252,81 +1475,40 @@ export default function Sales() {
                   maxWidth: 450
                 }}
               >
-
                 <Stack spacing={1.5}>
-
                   {/* ITEMS */}
 
-                  <Box
-                    display="flex"
-                    justifyContent="space-between"
-                  >
-                    <Typography>
-                      Items
-                    </Typography>
+                  <Box display="flex" justifyContent="space-between">
+                    <Typography>Items</Typography>
 
-                    <Typography fontWeight={700}>
-                      {getItemQuantity(
-                        selectedSale
-                      )}
-                    </Typography>
+                    <Typography fontWeight={700}>{getItemQuantity(selectedSale)}</Typography>
                   </Box>
 
                   {/* SUBTOTAL */}
 
-                  <Box
-                    display="flex"
-                    justifyContent="space-between"
-                  >
-                    <Typography>
-                      Subtotal
-                    </Typography>
+                  <Box display="flex" justifyContent="space-between">
+                    <Typography>Subtotal</Typography>
 
-                    <Typography>
-                      {formatTZS(
-                        selectedSale.subtotal
-                      )}
-                    </Typography>
+                    <Typography>{formatTZS(selectedSale.subtotal)}</Typography>
                   </Box>
 
                   {/* TAX */}
 
-                  <Box
-                    display="flex"
-                    justifyContent="space-between"
-                  >
-                    <Typography>
-                      Tax
-                    </Typography>
+                  <Box display="flex" justifyContent="space-between">
+                    <Typography>Tax</Typography>
 
-                    <Typography>
-                      {formatTZS(
-                        selectedSale.tax
-                      )}
-                    </Typography>
+                    <Typography>{formatTZS(selectedSale.tax)}</Typography>
                   </Box>
 
                   <Divider />
 
                   {/* TOTAL */}
 
-                  <Box
-                    display="flex"
-                    justifyContent="space-between"
-                    alignItems="center"
-                  >
-                    <Typography variant="h6">
-                      Total
-                    </Typography>
+                  <Box display="flex" justifyContent="space-between" alignItems="center">
+                    <Typography variant="h6">Total</Typography>
 
-                    <Typography
-                      variant="h6"
-                      color="primary"
-                      fontWeight={700}
-                    >
-                      {formatTZS(
-                        selectedSale.total
-                      )}
+                    <Typography variant="h6" color="primary" fontWeight={700}>
+                      {formatTZS(selectedSale.total)}
                     </Typography>
                   </Box>
 
@@ -2336,71 +1518,33 @@ export default function Sales() {
 
                   {isLoanSale(selectedSale) && (
                     <>
-
                       <Divider />
 
-                      <Box
-                        display="flex"
-                        justifyContent="space-between"
-                      >
-                        <Typography>
-                          Paid Now
-                        </Typography>
+                      <Box display="flex" justifyContent="space-between">
+                        <Typography>Paid Now</Typography>
 
-                        <Typography
-                          fontWeight={700}
-                          color="success.main"
-                        >
-                          {formatTZS(
-                            selectedSale.paidNow
-                          )}
+                        <Typography fontWeight={700} color="success.main">
+                          {formatTZS(selectedSale.paidNow)}
                         </Typography>
                       </Box>
 
-                      <Box
-                        display="flex"
-                        justifyContent="space-between"
-                      >
-                        <Typography fontWeight={700}>
-                          Outstanding
-                        </Typography>
+                      <Box display="flex" justifyContent="space-between">
+                        <Typography fontWeight={700}>Outstanding</Typography>
 
-                        <Typography
-                          fontWeight={700}
-                          color={
-                            getOutstanding(
-                              selectedSale
-                            ) > 0
-                              ? 'error.main'
-                              : 'success.main'
-                          }
-                        >
-                          {formatTZS(
-                            selectedSale.remainingBalance
-                          )}
+                        <Typography fontWeight={700} color={getOutstanding(selectedSale) > 0 ? 'error.main' : 'success.main'}>
+                          {formatTZS(selectedSale.remainingBalance)}
                         </Typography>
                       </Box>
 
-                      <Box
-                        display="flex"
-                        justifyContent="space-between"
-                        alignItems="center"
-                      >
-                        <Typography>
-                          Loan Status
-                        </Typography>
+                      <Box display="flex" justifyContent="space-between" alignItems="center">
+                        <Typography>Loan Status</Typography>
 
                         <Chip
                           size="small"
-                          label={loanStatusLabel(
-                            selectedSale.loanStatus
-                          )}
-                          color={loanStatusColor(
-                            selectedSale.loanStatus
-                          )}
+                          label={loanStatusLabel(selectedSale.loanStatus)}
+                          color={loanStatusColor(selectedSale.loanStatus)}
                         />
                       </Box>
-
                     </>
                   )}
 
@@ -2408,45 +1552,23 @@ export default function Sales() {
                       CASH PAYMENT
                   ========================================= */}
 
-                  {selectedSale.paymentMethod ===
-                    'cash' && (
+                  {selectedSale.paymentMethod === 'cash' && (
                     <>
-
                       <Divider />
 
-                      <Box
-                        display="flex"
-                        justifyContent="space-between"
-                      >
-                        <Typography>
-                          Cash Given
-                        </Typography>
+                      <Box display="flex" justifyContent="space-between">
+                        <Typography>Cash Given</Typography>
 
-                        <Typography>
-                          {formatTZS(
-                            selectedSale.cashGiven
-                          )}
-                        </Typography>
+                        <Typography>{formatTZS(selectedSale.cashGiven)}</Typography>
                       </Box>
 
-                      <Box
-                        display="flex"
-                        justifyContent="space-between"
-                      >
-                        <Typography fontWeight={700}>
-                          Change
-                        </Typography>
+                      <Box display="flex" justifyContent="space-between">
+                        <Typography fontWeight={700}>Change</Typography>
 
-                        <Typography
-                          fontWeight={700}
-                          color="success.main"
-                        >
-                          {formatTZS(
-                            selectedSale.changeAmount
-                          )}
+                        <Typography fontWeight={700} color="success.main">
+                          {formatTZS(selectedSale.changeAmount)}
                         </Typography>
                       </Box>
-
                     </>
                   )}
 
@@ -2454,51 +1576,27 @@ export default function Sales() {
 
                   {/* PROFIT */}
 
-                  <Box
-                    display="flex"
-                    justifyContent="space-between"
-                  >
-                    <Typography>
-                      Profit
-                    </Typography>
+                  <Box display="flex" justifyContent="space-between">
+                    <Typography>Profit</Typography>
 
-                    <Typography
-                      fontWeight={700}
-                      color="success.main"
-                    >
-                      {formatTZS(
-                        selectedSale.totalProfit
-                      )}
+                    <Typography fontWeight={700} color="success.main">
+                      {formatTZS(selectedSale.totalProfit)}
                     </Typography>
                   </Box>
-
                 </Stack>
-
               </Box>
-
             </DialogContent>
 
             {/* DIALOG ACTIONS */}
 
             <DialogActions sx={{ p: 2 }}>
-
-              <Button
-                variant="outlined"
-                fullWidth
-                size="large"
-                onClick={handleCloseDetails}
-              >
+              <Button variant="outlined" fullWidth size="large" onClick={handleCloseDetails}>
                 Close
               </Button>
-
             </DialogActions>
-
           </>
-
         )}
-
       </Dialog>
-
     </Box>
   );
 }
